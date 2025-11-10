@@ -1,0 +1,20 @@
+# KiwiSDR Recorder Dependencies
+# Python 3.9+ required for zoneinfo support
+
+requests>=2.28.0
+# Used for fetching KiwiSDR public listings
+
+# Note: The following are part of Python standard library (no install needed):
+# - argparse
+# - email.utils
+# - html
+# - json
+# - logging
+# - pathlib
+# - re
+# - statistics
+# - subprocess
+# - concurrent.futures
+# - datetime
+# - zoneinfo (Python 3.9+)
+# - urllib.parse
