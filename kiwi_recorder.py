@@ -24,6 +24,7 @@ import os
 import pathlib
 import random
 import re
+import socket
 import statistics
 import subprocess
 import sys
@@ -81,8 +82,11 @@ class Config:
     FEED_TITLE = "198 kHz Shipping Forecast"
     FEED_DESC = "Automated 198 kHz Shipping Forecast recordings via KiwiSDR."
     FEED_LANG = "en-gb"
-    FEED_AUTHOR = "KiwiSDR capture on cherrypi"
-    BASE_URL = "http://cherrypi.local/198k"
+
+    # Configurable via environment variables
+    HOSTNAME = socket.gethostname()
+    FEED_AUTHOR = os.getenv("FEED_AUTHOR", f"KiwiSDR capture on {HOSTNAME}")
+    BASE_URL = os.getenv("BASE_URL", f"http://{HOSTNAME}.local/198k")
 
     # Fallback receiver
     FALLBACK_HOST = "norfolk.george-smart.co.uk"
@@ -914,9 +918,9 @@ def cmd_record(args, logger: logging.Logger) -> int:
         logger.info("[post-process] Detecting and fading out anthem...")
         processed_path = process_recording(
             wav_path,
-            fade_duration=2.0,
+            fade_duration=3.0,
             logger=logger,
-            insert_test_beep=True
+            insert_test_beep=False
         )
         if processed_path:
             logger.info(f"[post-process] Created {processed_path}")
