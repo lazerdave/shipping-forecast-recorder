@@ -433,16 +433,37 @@ def process_recording(
             else:
                 fade_start = cut_sample
 
-            # Apply fade
-            fade_samples = int(fade_duration * sample_rate)
-            fade_end = fade_start + fade_samples
+            # Apply two-stage fade
+            # Stage 1: Fade from 100% to 50% over 3 seconds
+            stage1_duration = 3.0
+            stage1_samples = int(stage1_duration * sample_rate)
+            stage1_end = fade_start + stage1_samples
 
-            for i in range(fade_start, min(fade_end, len(samples))):
-                fade_factor = 1.0 - ((i - fade_start) / fade_samples)
+            for i in range(fade_start, min(stage1_end, len(samples))):
+                # Linear fade from 1.0 to 0.5
+                progress = (i - fade_start) / stage1_samples
+                fade_factor = 1.0 - (0.5 * progress)  # Goes from 1.0 to 0.5
                 samples[i] = int(samples[i] * fade_factor)
 
-            # Truncate after fade
-            samples = samples[:fade_end]
+            # Stage 2: Fade from 50% to 0% over 5 seconds
+            stage2_duration = 5.0
+            stage2_samples = int(stage2_duration * sample_rate)
+            stage2_end = stage1_end + stage2_samples
+
+            for i in range(stage1_end, min(stage2_end, len(samples))):
+                # Linear fade from 0.5 to 0.0
+                progress = (i - stage1_end) / stage2_samples
+                fade_factor = 0.5 * (1.0 - progress)  # Goes from 0.5 to 0.0
+                samples[i] = int(samples[i] * fade_factor)
+
+            # Cut audio at end of fade
+            samples = samples[:stage2_end]
+
+            # Append 10 seconds of silence
+            silence_duration = 10.0
+            silence_samples = int(silence_duration * sample_rate)
+            silence = np.zeros(silence_samples, dtype=np.int16)
+            samples = np.concatenate([samples, silence])
 
             # Write processed file
             processed_path = wav_path.replace('.wav', '_processed.wav')
@@ -455,7 +476,8 @@ def process_recording(
             logger.info(f"  Original duration: 13:00")
             logger.info(f"  Processed duration: {int(output_duration // 60)}:{int(output_duration % 60):02d}")
             logger.info(f"  Cut at: {int(cut_time // 60)}:{int(cut_time % 60):02d}")
-            logger.info(f"  Fade: {fade_duration}s")
+            logger.info(f"  Fade: 3s to 50%, then 5s to 0% (8s total)")
+            logger.info(f"  Silence: 10s appended")
 
             return processed_path
 
