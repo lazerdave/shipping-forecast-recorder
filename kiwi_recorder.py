@@ -39,6 +39,7 @@ from zoneinfo import ZoneInfo
 import numpy as np
 import requests
 import wave
+from scipy import signal
 
 
 # ============================================================================
@@ -57,6 +58,7 @@ class Config:
     LOG_FILE = str(HOME / "Shipping_Forecast_SDR_Recordings.log")
     FEED_PATH = HOME / "share" / "198k" / "feed.xml"
     ART_NAME = "artwork.jpg"
+    ANTHEM_TEMPLATE = str(HOME / "share" / "198k" / "anthem_template.wav")
 
     # Recording settings
     FREQ_KHZ = "198"
@@ -79,14 +81,14 @@ class Config:
     # Feed settings
     MAX_FEED_ITEMS = 50
     AUDIO_EXTS = (".mp3", ".wav", ".m4a")
-    FEED_TITLE = "198 kHz Shipping Forecast"
-    FEED_DESC = "Automated 198 kHz Shipping Forecast recordings via KiwiSDR."
+    FEED_TITLE = "Shipping Forecast Tailscale"
+    FEED_DESC = "Automated 198 kHz Shipping Forecast recordings via KiwiSDR, delivered via Tailscale."
     FEED_LANG = "en-gb"
 
     # Configurable via environment variables
     HOSTNAME = socket.gethostname()
     FEED_AUTHOR = os.getenv("FEED_AUTHOR", f"KiwiSDR capture on {HOSTNAME}")
-    BASE_URL = os.getenv("BASE_URL", f"http://{HOSTNAME}.local/198k")
+    BASE_URL = os.getenv("BASE_URL", "https://zigbee.minskin-manta.ts.net")
 
     # Fallback receiver
     FALLBACK_HOST = "norfolk.george-smart.co.uk"
@@ -329,49 +331,68 @@ def fetch_shipping_forecast(logger: logging.Logger) -> Optional[str]:
 
 def detect_anthem_start(wav_path: str, logger: logging.Logger) -> Optional[Tuple[float, int]]:
     """
-    Detect where the national anthem starts by finding sustained silence
-    Scans from 10 minutes onwards (or 75% through file, whichever is earlier)
-    to avoid false positives while handling variable forecast lengths
-    Adds 1 second offset to the detection point
+    Detect where the national anthem starts using cross-correlation with a template
+
+    Uses a pre-recorded anthem sample (drumroll + opening notes) to find the
+    anthem in the recording via cross-correlation pattern matching.
+
+    Scans from 10 minutes onwards to avoid false positives.
 
     Returns:
         Tuple of (time_in_seconds, sample_index) or None if not found
     """
     try:
+        # Check if template exists
+        if not os.path.exists(Config.ANTHEM_TEMPLATE):
+            logger.warning(f"Anthem template not found: {Config.ANTHEM_TEMPLATE}")
+            return None
+
+        # Load template
+        with wave.open(Config.ANTHEM_TEMPLATE, 'r') as wav:
+            frames = wav.readframes(wav.getnframes())
+            template_rate = wav.getframerate()
+            template = np.frombuffer(frames, dtype=np.int16).astype(np.float32)
+
+        # Load recording
         with wave.open(wav_path, 'r') as wav:
             frames = wav.readframes(wav.getnframes())
-            sample_rate = wav.getframerate()
-            samples = np.frombuffer(frames, dtype=np.int16)
+            rec_rate = wav.getframerate()
+            recording = np.frombuffer(frames, dtype=np.int16).astype(np.float32)
 
-            total_duration = len(samples) / sample_rate
-
-            # Start scanning from 10 minutes OR 75% through, whichever is earlier
-            # This handles variable forecast lengths
-            start_time = min(10 * 60, total_duration * 0.75)
-
-            window_size = int(sample_rate * 0.5)  # 0.5 second windows
-            start_sample = int(start_time * sample_rate)
-
-            consecutive_low = 0
-
-            for i in range(start_sample, len(samples), window_size):
-                window = samples[i:i+window_size]
-                if len(window) > 0:
-                    rms = np.sqrt(np.mean(window.astype(np.float32)**2))
-
-                    if rms < 250:  # Silence threshold (raised to catch quieter "good night" pauses)
-                        consecutive_low += 1
-                        if consecutive_low >= 2:  # Sustained silence (at least 1 second)
-                            # Add 1 second offset
-                            adjusted_sample = i + sample_rate
-                            adjusted_time = adjusted_sample / sample_rate
-                            logger.info(f"Anthem detected at {int(adjusted_time // 60)}:{int(adjusted_time % 60):02d}")
-                            return adjusted_time, adjusted_sample
-                    else:
-                        consecutive_low = 0
-
-            logger.warning("No anthem start point detected")
+        # Verify sample rates match
+        if template_rate != rec_rate:
+            logger.warning(f"Sample rate mismatch! Template: {template_rate}, Recording: {rec_rate}")
             return None
+
+        # Start search from 10 minutes
+        start_search_time = 10 * 60
+        start_sample = int(start_search_time * rec_rate)
+
+        if start_sample >= len(recording):
+            logger.warning("Recording too short for anthem detection")
+            return None
+
+        search_region = recording[start_sample:]
+
+        # Normalize both signals
+        template_norm = (template - np.mean(template)) / np.std(template)
+        search_norm = (search_region - np.mean(search_region)) / np.std(search_region)
+
+        # Compute cross-correlation
+        correlation = signal.correlate(search_norm, template_norm, mode='valid')
+
+        # Find peak
+        peak_idx = np.argmax(correlation)
+        peak_value = correlation[peak_idx]
+
+        # Convert to time in original recording
+        detection_sample = start_sample + peak_idx
+        detection_time = detection_sample / rec_rate
+
+        logger.info(f"Anthem detected at {int(detection_time // 60)}:{int(detection_time % 60):02d} (correlation: {peak_value:.1f})")
+
+        return detection_time, detection_sample
+
     except Exception as e:
         logger.warning(f"Error detecting anthem: {e}")
         return None
@@ -433,37 +454,16 @@ def process_recording(
             else:
                 fade_start = cut_sample
 
-            # Apply two-stage fade
-            # Stage 1: Fade from 100% to 50% over 3 seconds
-            stage1_duration = 3.0
-            stage1_samples = int(stage1_duration * sample_rate)
-            stage1_end = fade_start + stage1_samples
+            # Apply fade
+            fade_samples = int(fade_duration * sample_rate)
+            fade_end = fade_start + fade_samples
 
-            for i in range(fade_start, min(stage1_end, len(samples))):
-                # Linear fade from 1.0 to 0.5
-                progress = (i - fade_start) / stage1_samples
-                fade_factor = 1.0 - (0.5 * progress)  # Goes from 1.0 to 0.5
+            for i in range(fade_start, min(fade_end, len(samples))):
+                fade_factor = 1.0 - ((i - fade_start) / fade_samples)
                 samples[i] = int(samples[i] * fade_factor)
 
-            # Stage 2: Fade from 50% to 0% over 5 seconds
-            stage2_duration = 5.0
-            stage2_samples = int(stage2_duration * sample_rate)
-            stage2_end = stage1_end + stage2_samples
-
-            for i in range(stage1_end, min(stage2_end, len(samples))):
-                # Linear fade from 0.5 to 0.0
-                progress = (i - stage1_end) / stage2_samples
-                fade_factor = 0.5 * (1.0 - progress)  # Goes from 0.5 to 0.0
-                samples[i] = int(samples[i] * fade_factor)
-
-            # Cut audio at end of fade
-            samples = samples[:stage2_end]
-
-            # Append 10 seconds of silence
-            silence_duration = 10.0
-            silence_samples = int(silence_duration * sample_rate)
-            silence = np.zeros(silence_samples, dtype=np.int16)
-            samples = np.concatenate([samples, silence])
+            # Truncate after fade
+            samples = samples[:fade_end]
 
             # Write processed file
             processed_path = wav_path.replace('.wav', '_processed.wav')
@@ -476,13 +476,59 @@ def process_recording(
             logger.info(f"  Original duration: 13:00")
             logger.info(f"  Processed duration: {int(output_duration // 60)}:{int(output_duration % 60):02d}")
             logger.info(f"  Cut at: {int(cut_time // 60)}:{int(cut_time % 60):02d}")
-            logger.info(f"  Fade: 3s to 50%, then 5s to 0% (8s total)")
-            logger.info(f"  Silence: 10s appended")
+            logger.info(f"  Fade: {fade_duration}s")
+
+            # Convert to MP3
+            mp3_path = convert_to_mp3(processed_path, logger)
+            if mp3_path:
+                logger.info(f"Converted to MP3: {mp3_path}")
 
             return processed_path
 
     except Exception as e:
         logger.error(f"Post-processing failed: {e}")
+        return None
+
+
+def convert_to_mp3(wav_path: str, logger: logging.Logger, bitrate: str = "64k") -> Optional[str]:
+    """
+    Convert WAV file to MP3 using ffmpeg.
+
+    Args:
+        wav_path: Path to WAV file
+        logger: Logger instance
+        bitrate: MP3 bitrate (default: 64k for speech)
+
+    Returns:
+        Path to MP3 file, or None if conversion failed
+    """
+    try:
+        mp3_path = wav_path.replace('.wav', '.mp3')
+
+        cmd = [
+            'ffmpeg', '-i', wav_path,
+            '-codec:a', 'libmp3lame',
+            '-b:a', bitrate,
+            '-y',  # Overwrite output file
+            mp3_path
+        ]
+
+        # Run conversion with suppressed output
+        result = subprocess.run(
+            cmd,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=300  # 5 minute timeout
+        )
+
+        if result.returncode == 0 and os.path.exists(mp3_path):
+            return mp3_path
+        else:
+            logger.warning(f"MP3 conversion failed for {wav_path}")
+            return None
+
+    except Exception as e:
+        logger.warning(f"MP3 conversion error: {e}")
         return None
 
 
@@ -977,13 +1023,18 @@ def rfc2822(t: float) -> str:
 
 
 def list_audio_files() -> List[Tuple[float, str, int]]:
-    """Return [(mtime, filename, size)] newest first, limited to MAX_ITEMS"""
+    """Return [(mtime, filename, size)] newest first, limited to MAX_ITEMS.
+
+    Prefers MP3 files over WAV files when both exist with the same basename.
+    """
     base_dir = Path(Config.OUT_DIR)
     items = []
 
     if not base_dir.exists():
         return items
 
+    # First pass: collect all files
+    all_files = {}
     for p in base_dir.iterdir():
         if not p.is_file():
             continue
@@ -995,7 +1046,27 @@ def list_audio_files() -> List[Tuple[float, str, int]]:
         except Exception:
             continue
 
-        items.append((st.st_mtime, p.name, st.st_size))
+        # Get basename without extension
+        basename = p.stem
+        ext = p.suffix.lower()
+
+        # Store file info keyed by basename
+        if basename not in all_files:
+            all_files[basename] = {}
+
+        all_files[basename][ext] = (st.st_mtime, p.name, st.st_size)
+
+    # Second pass: prefer MP3 over WAV for each basename
+    for basename, files_dict in all_files.items():
+        if '.mp3' in files_dict:
+            # Prefer MP3 if it exists
+            items.append(files_dict['.mp3'])
+        elif '.wav' in files_dict:
+            # Fall back to WAV
+            items.append(files_dict['.wav'])
+        elif '.m4a' in files_dict:
+            # Fall back to M4A
+            items.append(files_dict['.m4a'])
 
     items.sort(reverse=True)
     return items[:Config.MAX_FEED_ITEMS]
@@ -1191,7 +1262,6 @@ def cmd_setup(args, logger: logging.Logger) -> int:
     # Calculate local times for London targets
     lh_rec0, lm_rec0 = to_local_hm("00:47")
     lh_scan0, lm_scan0 = to_local_hm("00:42")  # 5 min before 00:47
-    lh_rec1, lm_rec1 = to_local_hm("05:19")
 
     block_start = "# >>> KIWI-SDR AUTO (managed) >>>"
     block_end = "# <<< KIWI-SDR AUTO (managed) <<<"
@@ -1206,9 +1276,6 @@ def cmd_setup(args, logger: logging.Logger) -> int:
 
 # Record at 00:47 London
 {lm_rec0} {lh_rec0} * * * /usr/bin/python3 {script_path} record >> {Config.LOG_FILE} 2>&1
-
-# Record at 05:19 London
-{lm_rec1} {lh_rec1} * * * /usr/bin/python3 {script_path} record >> {Config.LOG_FILE} 2>&1
 
 # Weekly log trim (keep last 20000 lines), Sunday 00:20 local
 20 0 * * 0 /bin/bash -c 'tail -n 20000 "{Config.LOG_FILE}" > "{Config.LOG_FILE}.tmp" && mv "{Config.LOG_FILE}.tmp" "{Config.LOG_FILE}"'
@@ -1251,9 +1318,8 @@ def cmd_setup(args, logger: logging.Logger) -> int:
         return 1
 
     logger.info(
-        f"Crontab updated for London targets (00:47 & 05:19). "
-        f"Local times -> scan {lh_scan0}:{lm_scan0}, "
-        f"record {lh_rec0}:{lm_rec0} & {lh_rec1}:{lm_rec1}"
+        f"Crontab updated for London target 00:47. "
+        f"Local times -> scan {lh_scan0}:{lm_scan0}, record {lh_rec0}:{lm_rec0}"
     )
 
     return 0

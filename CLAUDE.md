@@ -6,6 +6,53 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Shipping Forecast Recorder - Specialized automated recorder for BBC Shipping Forecast at 198 kHz longwave. Uses sonic fingerprinting to detect and cut before the national anthem, fetches Met Office forecasts, and generates podcast feeds. Forked from Frequency Harvester for Shipping Forecast-specific features.
 
+## Recent Changes
+
+### 2025-11-19: MP3 Conversion & HTTP Range Request Fix
+
+**What Changed:**
+- Converted all audio files from WAV to MP3 format (64 kbps bitrate)
+- Replaced Python's http.server with nginx for HTTP Range request support
+- Updated feed generation to prefer MP3 files
+- Automatic MP3 conversion after each recording
+
+**Why:**
+- WAV files don't play in most podcast apps (especially iOS)
+- Python's http.server doesn't support HTTP Range requests (required for streaming)
+- MP3 files are 3x smaller and universally supported
+
+**New Components:**
+- `/etc/nginx/sites-available/shipping-forecast` - nginx configuration with Range support
+- `convert_to_mp3()` function in kiwi_recorder.py (lines 493-532)
+- Updated `list_audio_files()` to prefer MP3 over WAV (lines 1025-1072)
+
+**Impact:**
+- Episodes now play correctly in all podcast apps
+- File sizes reduced from ~19 MB to ~5.5 MB per episode
+- Proper streaming support with seek/resume functionality
+- nginx serves files instead of Python's http.server
+
+### 2025-11-19: Public Podcast Feed via Tailscale Funnel
+
+**What Changed:**
+- Set up systemd services for automatic HTTP server and Tailscale funnel
+- Public podcast feed now available at: https://zigbee.minskin-manta.ts.net/feed.xml
+- Renamed podcast to "Shipping Forecast Tailscale"
+- Added "The Great Wave off Kanagawa" artwork
+- Services auto-start on boot
+
+**New Components:**
+- `/etc/systemd/system/shipping-forecast-funnel.service` - Tailscale funnel exposing port 8080
+- `NOTES.md` - Operational documentation for the public feed setup
+
+**Impact:**
+- Podcast is now publicly accessible on the internet
+- No manual intervention needed; services start automatically on boot
+- Feed updates automatically after each recording
+
+**Related Documentation:**
+- See `NOTES.md` for detailed setup, management commands, and troubleshooting
+
 ## Environment
 
 - Platform: Raspberry Pi (ARM64 architecture)
@@ -170,3 +217,5 @@ cat /home/pi/kiwi_scans/latest_scan_198.json | jq '.top20[] | {host, port, avg}'
 - Timezone handling converts London times to local automatically
 - Scans are parallelized for efficiency; adjust SCAN_WORKERS if needed
 - Feed generation happens automatically after recording
+- to memorize
+- to memorize
