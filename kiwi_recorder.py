@@ -95,7 +95,6 @@ class Config:
     RACK_BACKUP_PATH = "/mnt/rack-shipping"
 
     # Internet Archive settings
-    IA_COLLECTION = "community-audio"
     IA_UPLOAD_TIMEOUT = 300  # 5 minutes for ~5.5 MB file
 
     # Fallback receiver
@@ -659,12 +658,11 @@ def upload_to_internet_archive(
             identifier = f"shipping-forecast-{now.strftime('%Y-%m-%d-%H%M')}"
             logger.warning(f"Could not extract date from filename, using current: {identifier}")
 
-        # Build metadata
+        # Build metadata (no collection specified - uses personal uploads)
         metadata = {
             "title": f"BBC Shipping Forecast - {date_str} {time_str} UTC",
             "date": date_str,
             "mediatype": "audio",
-            "collection": Config.IA_COLLECTION,
             "language": "eng",
             "creator": "BBC Radio 4",
             "subject": ["BBC", "Shipping Forecast", "Radio 4", "198 kHz", "Maritime Weather", "Longwave"],
