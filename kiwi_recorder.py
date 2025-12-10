@@ -24,6 +24,7 @@ import os
 import pathlib
 import random
 import re
+import shutil
 import socket
 import statistics
 import subprocess
@@ -89,6 +90,13 @@ class Config:
     HOSTNAME = socket.gethostname()
     FEED_AUTHOR = os.getenv("FEED_AUTHOR", f"KiwiSDR capture on {HOSTNAME}")
     BASE_URL = os.getenv("BASE_URL", "https://zigbee.minskin-manta.ts.net")
+
+    # Rack backup settings
+    RACK_BACKUP_PATH = "/mnt/rack-shipping"
+
+    # Internet Archive settings
+    IA_COLLECTION = "community-audio"
+    IA_UPLOAD_TIMEOUT = 300  # 5 minutes for ~5.5 MB file
 
     # Fallback receiver
     FALLBACK_HOST = "norfolk.george-smart.co.uk"
@@ -535,6 +543,168 @@ def convert_to_mp3(wav_path: str, logger: logging.Logger, bitrate: str = "64k") 
 
     except Exception as e:
         logger.warning(f"MP3 conversion error: {e}")
+        return None
+
+
+def backup_to_rack(
+    wav_path: str,
+    mp3_path: str,
+    logger: logging.Logger
+) -> bool:
+    """
+    Backup WAV and MP3 files to Rack storage with YYYY/MM folder structure.
+
+    Args:
+        wav_path: Path to original WAV file
+        mp3_path: Path to processed MP3 file
+        logger: Logger instance
+
+    Returns:
+        True if successful, False otherwise
+    """
+    try:
+        # Check if Rack is mounted
+        if not os.path.ismount(Config.RACK_BACKUP_PATH):
+            logger.warning(f"Rack not mounted at {Config.RACK_BACKUP_PATH}")
+            return False
+
+        # Extract date from filename (format: ShippingFCST-YYMMDD_...)
+        basename = os.path.basename(mp3_path)
+        date_match = re.search(r'ShippingFCST-(\d{2})(\d{2})(\d{2})_', basename)
+
+        if date_match:
+            yy, mm, dd = date_match.groups()
+            year = f"20{yy}"
+            month = mm
+        else:
+            # Fallback to current date
+            now = datetime.now()
+            year = str(now.year)
+            month = f"{now.month:02d}"
+            logger.warning(f"Could not extract date from filename, using current date: {year}/{month}")
+
+        # Create target directory
+        target_dir = Path(Config.RACK_BACKUP_PATH) / year / month
+        target_dir.mkdir(parents=True, exist_ok=True)
+
+        copied_files = []
+
+        # Copy WAV file if it exists
+        if wav_path and os.path.exists(wav_path):
+            wav_dest = target_dir / os.path.basename(wav_path)
+            shutil.copy2(wav_path, wav_dest)
+            if wav_dest.exists() and wav_dest.stat().st_size == os.path.getsize(wav_path):
+                copied_files.append(("WAV", wav_dest))
+                logger.info(f"  Backed up WAV: {wav_dest}")
+            else:
+                logger.warning(f"  WAV copy verification failed")
+
+        # Copy MP3 file if it exists
+        if mp3_path and os.path.exists(mp3_path):
+            mp3_dest = target_dir / os.path.basename(mp3_path)
+            shutil.copy2(mp3_path, mp3_dest)
+            if mp3_dest.exists() and mp3_dest.stat().st_size == os.path.getsize(mp3_path):
+                copied_files.append(("MP3", mp3_dest))
+                logger.info(f"  Backed up MP3: {mp3_dest}")
+            else:
+                logger.warning(f"  MP3 copy verification failed")
+
+        return len(copied_files) > 0
+
+    except Exception as e:
+        logger.warning(f"Backup to Rack failed: {e}")
+        return False
+
+
+def upload_to_internet_archive(
+    mp3_path: str,
+    logger: logging.Logger
+) -> Optional[str]:
+    """
+    Upload processed MP3 to Internet Archive.
+
+    Args:
+        mp3_path: Path to MP3 file to upload
+        logger: Logger instance
+
+    Returns:
+        Archive.org URL if successful, None otherwise
+    """
+    try:
+        import internetarchive as ia
+    except ImportError:
+        logger.warning("internetarchive library not installed. Run: pip install internetarchive")
+        return None
+
+    try:
+        if not os.path.exists(mp3_path):
+            logger.warning(f"MP3 file not found: {mp3_path}")
+            return None
+
+        # Extract date and time from filename (format: ShippingFCST-YYMMDD_AM_HHMMSSUTC...)
+        basename = os.path.basename(mp3_path)
+        date_match = re.search(r'ShippingFCST-(\d{2})(\d{2})(\d{2})_[AP]M_(\d{2})(\d{2})', basename)
+
+        if date_match:
+            yy, mm, dd, hh, mi = date_match.groups()
+            year = f"20{yy}"
+            date_str = f"{year}-{mm}-{dd}"
+            time_str = f"{hh}:{mi}"
+            identifier = f"shipping-forecast-{year}-{mm}-{dd}-{hh}{mi}"
+        else:
+            # Fallback to current date/time
+            now = datetime.now(timezone.utc)
+            date_str = now.strftime("%Y-%m-%d")
+            time_str = now.strftime("%H:%M")
+            identifier = f"shipping-forecast-{now.strftime('%Y-%m-%d-%H%M')}"
+            logger.warning(f"Could not extract date from filename, using current: {identifier}")
+
+        # Build metadata
+        metadata = {
+            "title": f"BBC Shipping Forecast - {date_str} {time_str} UTC",
+            "date": date_str,
+            "mediatype": "audio",
+            "collection": Config.IA_COLLECTION,
+            "language": "eng",
+            "creator": "BBC Radio 4",
+            "subject": ["BBC", "Shipping Forecast", "Radio 4", "198 kHz", "Maritime Weather", "Longwave"],
+            "description": (
+                f"BBC Radio 4 Shipping Forecast broadcast on {date_str} at {time_str} UTC. "
+                "Recorded from 198 kHz longwave transmission via KiwiSDR network."
+            ),
+            "licenseurl": "https://creativecommons.org/licenses/by-nc-sa/4.0/"
+        }
+
+        logger.info(f"  Uploading to Internet Archive...")
+        logger.info(f"  Identifier: {identifier}")
+
+        # Upload
+        item = ia.get_item(identifier)
+        responses = item.upload(
+            mp3_path,
+            metadata=metadata,
+            verify=True,
+            retries=3,
+            retries_sleep=10
+        )
+
+        # Check response
+        if responses and len(responses) > 0:
+            response = responses[0]
+            if hasattr(response, 'status_code') and response.status_code == 200:
+                url = f"https://archive.org/details/{identifier}"
+                logger.info(f"  Upload successful: {url}")
+                return url
+            else:
+                status = getattr(response, 'status_code', 'unknown')
+                logger.warning(f"  Upload returned status: {status}")
+                return None
+        else:
+            logger.warning("  Upload returned no response")
+            return None
+
+    except Exception as e:
+        logger.warning(f"Internet Archive upload failed: {e}")
         return None
 
 
@@ -1008,6 +1178,38 @@ def cmd_record(args, logger: logging.Logger) -> int:
         cmd_feed(args, logger)
     except Exception as e:
         logger.warning(f"Feed rebuild failed: {e}")
+
+    # Determine file paths for backup/archive
+    # processed_path is the processed WAV, MP3 is derived from it
+    mp3_path = None
+    if processed_path and os.path.exists(processed_path):
+        mp3_path = processed_path.replace('.wav', '.mp3')
+        if not os.path.exists(mp3_path):
+            mp3_path = None
+
+    # Backup to Rack
+    try:
+        logger.info("[backup] Copying files to Rack...")
+        if backup_to_rack(wav_path, mp3_path, logger):
+            logger.info("[backup] Files backed up to Rack successfully")
+        else:
+            logger.warning("[backup] Backup to Rack failed or incomplete")
+    except Exception as e:
+        logger.warning(f"[backup] Backup failed: {e}")
+
+    # Upload to Internet Archive
+    if mp3_path:
+        try:
+            logger.info("[archive] Uploading to Internet Archive...")
+            ia_url = upload_to_internet_archive(mp3_path, logger)
+            if ia_url:
+                logger.info(f"[archive] Uploaded: {ia_url}")
+            else:
+                logger.warning("[archive] Upload to Internet Archive failed")
+        except Exception as e:
+            logger.warning(f"[archive] Upload failed: {e}")
+    else:
+        logger.warning("[archive] Skipping Internet Archive upload - no MP3 file available")
 
     # Log health info
     now = datetime.now(timezone.utc)

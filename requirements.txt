@@ -4,6 +4,13 @@
 requests>=2.28.0
 # Used for fetching KiwiSDR public listings
 
+scipy
+numpy
+# Used for audio processing (anthem detection, fade)
+
+internetarchive>=3.0.0
+# Used for uploading recordings to Internet Archive
+
 # Note: The following are part of Python standard library (no install needed):
 # - argparse
 # - email.utils
