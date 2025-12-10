@@ -465,6 +465,12 @@ def process_recording(
             # Truncate after fade
             samples = samples[:fade_end]
 
+            # Add 3 seconds of silence at the end
+            silence_duration = 3.0
+            silence_samples = int(silence_duration * sample_rate)
+            silence = np.zeros(silence_samples, dtype=np.int16)
+            samples = np.concatenate([samples, silence])
+
             # Write processed file
             processed_path = wav_path.replace('.wav', '_processed.wav')
             with wave.open(processed_path, 'w') as wav_out:
@@ -986,7 +992,7 @@ def cmd_record(args, logger: logging.Logger) -> int:
         logger.info("[post-process] Detecting and fading out anthem...")
         processed_path = process_recording(
             wav_path,
-            fade_duration=3.0,
+            fade_duration=5.0,
             logger=logger,
             insert_test_beep=False
         )
