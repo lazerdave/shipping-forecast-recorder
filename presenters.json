@@ -1,0 +1,28 @@
+{
+  "presenters": [
+    {"name": "Zeb Soanes", "variations": ["Zeb", "Zeb Soanes", "Zeb Soanes'"]},
+    {"name": "Neil Nunes", "variations": ["Neil", "Neil Nunes", "Neil Nunes'"]},
+    {"name": "Chris Aldridge", "variations": ["Chris", "Chris Aldridge", "Chris Aldridge's"]},
+    {"name": "Corrie Corfield", "variations": ["Corrie", "Corrie Corfield", "Corrie Corfield's"]},
+    {"name": "Kathy Clugston", "variations": ["Kathy", "Kathy Clugston", "Kathy Clugston's"]},
+    {"name": "Susan Rae", "variations": ["Susan", "Susan Rae", "Susan Rae's", "Susan Ray"]},
+    {"name": "Alan Smith", "variations": ["Alan", "Alan Smith", "Alan Smith's"]},
+    {"name": "John Hammond", "variations": ["John Hammond", "John Hammond's"]},
+    {"name": "Harriet Cass", "variations": ["Harriet", "Harriet Cass", "Harriet Cass'"]},
+    {"name": "Diana Speed", "variations": ["Diana", "Diana Speed", "Diana Speed's"]},
+    {"name": "Carolyn Brown", "variations": ["Carolyn", "Carolyn Brown", "Carolyn Brown's"]},
+    {"name": "Vaughan Maybury", "variations": ["Vaughan", "Vaughan Maybury", "Vaughan Maybury's"]},
+    {"name": "David Miles", "variations": ["David", "David Miles", "David Miles'"]},
+    {"name": "Astley Jones", "variations": ["Astley", "Astley Jones", "Astley Jones'"]},
+    {"name": "Tom Sandars", "variations": ["Tom", "Tom Sandars", "Tom Sandars'", "Tom Sanders"]},
+    {"name": "Rory Morrison", "variations": ["Rory", "Rory Morrison", "Rory Morrison's"]},
+    {"name": "Caroline Nicholls", "variations": ["Caroline", "Caroline Nicholls", "Caroline Nicholls'", "Caroline Nichols"]},
+    {"name": "Richard Evans", "variations": ["Richard", "Richard Evans", "Richard Evans'"]},
+    {"name": "Peter Jefferson", "variations": ["Peter", "Peter Jefferson", "Peter Jefferson's"]},
+    {"name": "Charlotte Green", "variations": ["Charlotte", "Charlotte Green", "Charlotte Green's"]},
+    {"name": "Alice Arnold", "variations": ["Alice", "Alice Arnold", "Alice Arnold's"]},
+    {"name": "Dotun Adebayo", "variations": ["Dotun", "Dotun Adebayo", "Dotun Adebayo's"]}
+  ],
+  "_notes": "BBC Radio 4 continuity announcers who read the Shipping Forecast. Includes common transcription variations (possessives, typos). Sources: Wikipedia, zebsoanes.com, SWLing Post.",
+  "_last_updated": "2025-12-15"
+}

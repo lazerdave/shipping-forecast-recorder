@@ -8,6 +8,41 @@ Shipping Forecast Recorder - Specialized automated recorder for BBC Shipping For
 
 ## Recent Changes
 
+### 2025-12-15: Automatic Presenter Detection
+
+**What Changed:**
+- Added automatic detection of which BBC Radio 4 announcer read each Shipping Forecast
+- Uses Whisper speech-to-text (offloaded to Rack) on the final 45 seconds before anthem
+- Extracts presenter name from sign-off ("This is [Name]", "I'm [Name]", etc.)
+- Validates against database of 22 known BBC Radio 4 announcers
+- Optional LLM validation for uncertain matches (requires ANTHROPIC_API_KEY)
+
+**New Components:**
+- `presenters.json` - Database of known BBC Radio 4 announcers with name variations
+- `test_presenter_extraction.py` - Test suite for name extraction patterns
+- `/usr/local/bin/transcribe_audio.py` on Rack - Whisper transcription service
+- `detect_presenter()`, `validate_presenter_with_llm()` functions in kiwi_recorder.py
+- `notify_presenter_status()` - MQTT notification for presenter detection
+
+**Configuration:**
+```python
+Config.DETECT_PRESENTER = True  # Enable/disable
+Config.LLM_VALIDATE_PRESENTER = True  # Use LLM for uncertain matches
+Config.UNKNOWN_PRESENTER_LABEL = "Unknown Announcer"  # Fallback label
+```
+
+**Impact:**
+- Presenter name appears in podcast feed titles: "Shipping Forecast – AM 00:47 UTC (John Hammond)"
+- Presenter included in Internet Archive metadata (title, description, contributor)
+- Sidecar .txt files include PRESENTER section with confidence scores
+- MQTT notifications include presenter info and `needs_review` flag for unknowns
+
+**Graceful Degradation:**
+- If Whisper fails: presenter detection skipped, recording continues
+- If name unknown: uses "Unknown Announcer", flags for manual review via MQTT
+- If LLM unavailable: falls back to database matching only
+- Never blocks the feed from going out
+
 ### 2025-11-19: MP3 Conversion & HTTP Range Request Fix
 
 **What Changed:**
