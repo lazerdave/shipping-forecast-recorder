@@ -1,0 +1,30 @@
+Shipping Forecast Recorder Installer
+Version: 0.1
+Release Date: 2025-11-28
+Lines of Code: ~2900
+
+Components:
+- install.sh (main orchestration)
+- lib/colors.sh (256-color terminal support)
+- lib/ui.sh (interactive UI components)
+- lib/checks.sh (system validation)
+- lib/packages.sh (multi-distro package management)
+- lib/config.sh (configuration management)
+- lib/rollback.sh (error handling & rollback)
+- lib/tailscale.sh (Tailscale authentication)
+
+Features:
+✓ Interactive configuration with sensible defaults
+✓ Multi-distribution support (Debian, Ubuntu, Fedora, Arch)
+✓ Professional 256-color terminal UI
+✓ Tailscale integration with QR code authentication
+✓ Automatic rollback on installation failures
+✓ Multiple modes: interactive, silent, update, dry-run, diagnose
+✓ Progress tracking and validation
+✓ Comprehensive error handling
+✓ Configuration persistence
+
+Tested on:
+- Raspberry Pi OS (Debian-based)
+- ARM64 architecture
+- Python 3.11.2

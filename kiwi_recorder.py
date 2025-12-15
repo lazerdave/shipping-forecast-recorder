@@ -97,6 +97,11 @@ class Config:
     # Internet Archive settings
     IA_UPLOAD_TIMEOUT = 300  # 5 minutes for ~5.5 MB file
 
+    # MQTT notification settings
+    MQTT_BROKER = "192.168.4.64"
+    MQTT_PORT = 1883
+    MQTT_TOPIC = "shipping-forecast/status"
+
     # Fallback receiver
     FALLBACK_HOST = "norfolk.george-smart.co.uk"
     FALLBACK_PORT = 8073
@@ -707,6 +712,152 @@ def upload_to_internet_archive(
 
 
 # ============================================================================
+# MQTT NOTIFICATIONS
+# ============================================================================
+
+def mqtt_publish(payload: dict, logger: logging.Logger) -> bool:
+    """
+    Publish a JSON payload to MQTT broker.
+
+    Uses mosquitto_pub command to avoid additional Python dependencies.
+    Returns True if successful, False otherwise.
+    """
+    try:
+        message = json.dumps(payload)
+        result = subprocess.run(
+            [
+                "mosquitto_pub",
+                "-h", Config.MQTT_BROKER,
+                "-p", str(Config.MQTT_PORT),
+                "-t", Config.MQTT_TOPIC,
+                "-m", message,
+            ],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if result.returncode == 0:
+            logger.debug(f"[mqtt] Published: {payload.get('event', 'unknown')}")
+            return True
+        else:
+            logger.warning(f"[mqtt] Publish failed: {result.stderr}")
+            return False
+    except FileNotFoundError:
+        logger.warning("[mqtt] mosquitto_pub not installed")
+        return False
+    except subprocess.TimeoutExpired:
+        logger.warning("[mqtt] Publish timed out")
+        return False
+    except Exception as e:
+        logger.warning(f"[mqtt] Publish error: {e}")
+        return False
+
+
+def notify_recording_status(
+    success: bool,
+    duration_seconds: float | None = None,
+    receiver: str | None = None,
+    rssi: float | None = None,
+    filename: str | None = None,
+    error: str | None = None,
+    logger: logging.Logger = None,
+) -> None:
+    """Send MQTT notification about recording status."""
+    payload = {
+        "event": "recording",
+        "success": success,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+    if duration_seconds is not None:
+        payload["duration_seconds"] = round(duration_seconds, 1)
+        payload["duration_formatted"] = f"{int(duration_seconds // 60)}:{int(duration_seconds % 60):02d}"
+    if receiver:
+        payload["receiver"] = receiver
+    if rssi is not None:
+        payload["rssi"] = round(rssi, 1)
+    if filename:
+        payload["filename"] = filename
+    if error:
+        payload["error"] = error
+
+    mqtt_publish(payload, logger)
+
+
+def notify_backup_status(
+    destination: str,
+    success: bool,
+    filename: str | None = None,
+    error: str | None = None,
+    logger: logging.Logger = None,
+) -> None:
+    """Send MQTT notification about backup status."""
+    payload = {
+        "event": "backup",
+        "destination": destination,
+        "success": success,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+    if filename:
+        payload["filename"] = filename
+    if error:
+        payload["error"] = error
+
+    mqtt_publish(payload, logger)
+
+
+def notify_ia_status(
+    success: bool,
+    url: str | None = None,
+    identifier: str | None = None,
+    error: str | None = None,
+    logger: logging.Logger = None,
+) -> None:
+    """Send MQTT notification about Internet Archive upload status."""
+    payload = {
+        "event": "archive",
+        "destination": "internet_archive",
+        "success": success,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+    if url:
+        payload["url"] = url
+    if identifier:
+        payload["identifier"] = identifier
+    if error:
+        payload["error"] = error
+
+    mqtt_publish(payload, logger)
+
+
+def get_audio_duration(file_path: str) -> float | None:
+    """Get duration of audio file in seconds. Works with WAV and MP3."""
+    try:
+        if file_path.lower().endswith('.wav'):
+            with wave.open(file_path, 'rb') as wf:
+                frames = wf.getnframes()
+                rate = wf.getframerate()
+                return frames / rate
+        elif file_path.lower().endswith('.mp3'):
+            # Use ffprobe for MP3
+            result = subprocess.run(
+                [
+                    "ffprobe", "-v", "error",
+                    "-show_entries", "format=duration",
+                    "-of", "default=noprint_wrappers=1:nokey=1",
+                    file_path
+                ],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            if result.returncode == 0:
+                return float(result.stdout.strip())
+        return None
+    except Exception:
+        return None
+
+
+# ============================================================================
 # SCAN COMMAND
 # ============================================================================
 
@@ -1153,6 +1304,13 @@ def cmd_record(args, logger: logging.Logger) -> int:
         logger.info(f"Saved: {wav_path}")
     except Exception as e:
         logger.error(f"Recording failed: {e}")
+        notify_recording_status(
+            success=False,
+            receiver=f"{host}:{port}",
+            rssi=rssi_for_label,
+            error=str(e),
+            logger=logger,
+        )
         return 1
 
     # Post-process recording (fade out anthem)
@@ -1185,29 +1343,68 @@ def cmd_record(args, logger: logging.Logger) -> int:
         if not os.path.exists(mp3_path):
             mp3_path = None
 
+    # Send recording success notification
+    final_file = mp3_path or processed_path or wav_path
+    duration = get_audio_duration(final_file) if final_file else None
+    notify_recording_status(
+        success=True,
+        duration_seconds=duration,
+        receiver=f"{host}:{port}",
+        rssi=rssi_for_label,
+        filename=os.path.basename(final_file) if final_file else None,
+        logger=logger,
+    )
+
     # Backup to Rack
+    rack_success = False
+    rack_error = None
     try:
         logger.info("[backup] Copying files to Rack...")
         if backup_to_rack(wav_path, mp3_path, logger):
             logger.info("[backup] Files backed up to Rack successfully")
+            rack_success = True
         else:
+            rack_error = "Backup incomplete or Rack not mounted"
             logger.warning("[backup] Backup to Rack failed or incomplete")
     except Exception as e:
+        rack_error = str(e)
         logger.warning(f"[backup] Backup failed: {e}")
 
+    notify_backup_status(
+        destination="rack",
+        success=rack_success,
+        filename=os.path.basename(mp3_path) if mp3_path else os.path.basename(wav_path),
+        error=rack_error,
+        logger=logger,
+    )
+
     # Upload to Internet Archive
+    ia_success = False
+    ia_url = None
+    ia_error = None
     if mp3_path:
         try:
             logger.info("[archive] Uploading to Internet Archive...")
             ia_url = upload_to_internet_archive(mp3_path, logger)
             if ia_url:
                 logger.info(f"[archive] Uploaded: {ia_url}")
+                ia_success = True
             else:
+                ia_error = "Upload returned no URL"
                 logger.warning("[archive] Upload to Internet Archive failed")
         except Exception as e:
+            ia_error = str(e)
             logger.warning(f"[archive] Upload failed: {e}")
     else:
+        ia_error = "No MP3 file available"
         logger.warning("[archive] Skipping Internet Archive upload - no MP3 file available")
+
+    notify_ia_status(
+        success=ia_success,
+        url=ia_url,
+        error=ia_error,
+        logger=logger,
+    )
 
     # Log health info
     now = datetime.now(timezone.utc)

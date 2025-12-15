@@ -120,6 +120,12 @@ python3 /home/pi/kiwi_recorder.py setup      # Configure cron jobs for automatio
    - Finds exact moment of national anthem (typically 12:03)
    - Much more accurate than silence detection (no false positives from forecast pauses)
 
+6. **Archiving System** (automatic after recording)
+   - Backs up WAV and MP3 to Rack at `/mnt/rack-shipping/YYYY/MM/`
+   - Uploads MP3 to Internet Archive with metadata
+   - Sends MQTT notifications to `shipping-forecast/status` topic
+   - Manual catch-up utility: `sync_archive.py`
+
 ### Configuration
 
 All settings centralized in `Config` class at top of kiwi_recorder.py:
@@ -129,6 +135,10 @@ All settings centralized in `Config` class at top of kiwi_recorder.py:
 - Timeouts: connect=7s, discovery=8s, recording margin=60s
 - Parallel workers: 15
 - RSSI floor: -65.0 dBFS
+- MQTT broker: 192.168.4.64:1883 (topic: `shipping-forecast/status`)
+- Rack backup: /mnt/rack-shipping
+
+**Important:** Always use local IPs (e.g., `192.168.4.64`), not hostnames (e.g., `rack`) in configs. Hostname resolution fails in cron/service contexts.
 
 ### Key Improvements Over Original
 
@@ -217,5 +227,4 @@ cat /home/pi/kiwi_scans/latest_scan_198.json | jq '.top20[] | {host, port, avg}'
 - Timezone handling converts London times to local automatically
 - Scans are parallelized for efficiency; adjust SCAN_WORKERS if needed
 - Feed generation happens automatically after recording
-- to memorize
-- to memorize
+- Always use local IPs, not hostnames, in configs (hostname resolution unreliable in cron/services)
