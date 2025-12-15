@@ -466,7 +466,7 @@ def process_recording(
             else:
                 fade_start = cut_sample
 
-            # Apply fade
+            # Apply fade (10 seconds)
             fade_samples = int(fade_duration * sample_rate)
             fade_end = fade_start + fade_samples
 
@@ -477,11 +477,47 @@ def process_recording(
             # Truncate after fade
             samples = samples[:fade_end]
 
-            # Add 3 seconds of silence at the end
-            silence_duration = 3.0
-            silence_samples = int(silence_duration * sample_rate)
-            silence = np.zeros(silence_samples, dtype=np.int16)
-            samples = np.concatenate([samples, silence])
+            # Add subtle end chime (two soft tones: 880Hz then 440Hz)
+            chime_duration = 0.3
+            chime_samples = int(chime_duration * sample_rate)
+            t_chime = np.linspace(0, chime_duration, chime_samples, False)
+
+            # First tone (880Hz A5) with envelope
+            chime1 = np.sin(2 * np.pi * 880 * t_chime)
+            envelope1 = np.exp(-t_chime * 8)  # Quick decay
+            chime1 = chime1 * envelope1
+
+            # Second tone (440Hz A4) with envelope
+            chime2 = np.sin(2 * np.pi * 440 * t_chime)
+            envelope2 = np.exp(-t_chime * 6)  # Slightly slower decay
+            chime2 = chime2 * envelope2
+
+            # Gap between tones
+            gap_samples = int(0.15 * sample_rate)
+            gap = np.zeros(gap_samples)
+
+            # Combine chimes at -30dB (quiet but audible)
+            chime_amplitude = 1000  # About -30dB relative to full scale
+            full_chime = np.concatenate([
+                (chime1 * chime_amplitude).astype(np.int16),
+                gap.astype(np.int16),
+                (chime2 * chime_amplitude).astype(np.int16)
+            ])
+
+            # Add 2 seconds of very quiet pink-ish noise (-50dB) instead of silence
+            # This prevents podcast apps from skipping "silence"
+            noise_duration = 2.0
+            noise_samples = int(noise_duration * sample_rate)
+            # Generate white noise and apply simple lowpass for pink-ish character
+            white_noise = np.random.randn(noise_samples)
+            # Simple rolling average for crude lowpass
+            kernel_size = 10
+            pink_noise = np.convolve(white_noise, np.ones(kernel_size)/kernel_size, mode='same')
+            # Scale to -50dB (about 10 in 16-bit scale)
+            pink_noise = (pink_noise / np.max(np.abs(pink_noise)) * 10).astype(np.int16)
+
+            # Combine: main audio + chime + quiet noise
+            samples = np.concatenate([samples, full_chime, pink_noise])
 
             # Write processed file
             processed_path = wav_path.replace('.wav', '_processed.wav')
@@ -1318,7 +1354,7 @@ def cmd_record(args, logger: logging.Logger) -> int:
         logger.info("[post-process] Detecting and fading out anthem...")
         processed_path = process_recording(
             wav_path,
-            fade_duration=5.0,
+            fade_duration=10.0,
             logger=logger,
             insert_test_beep=False
         )
