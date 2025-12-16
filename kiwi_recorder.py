@@ -1212,6 +1212,7 @@ def notify_ia_status(
     url: str | None = None,
     identifier: str | None = None,
     error: str | None = None,
+    presenter_result: Dict[str, Any] | None = None,
     logger: logging.Logger = None,
 ) -> None:
     """Send MQTT notification about Internet Archive upload status."""
@@ -1227,6 +1228,14 @@ def notify_ia_status(
         payload["identifier"] = identifier
     if error:
         payload["error"] = error
+
+    # Include presenter info
+    if presenter_result:
+        payload["presenter"] = presenter_result.get("presenter") or Config.UNKNOWN_PRESENTER_LABEL
+        payload["presenter_confidence"] = presenter_result.get("confidence", 0.0)
+        payload["presenter_match_type"] = presenter_result.get("match_type", "none")
+        if presenter_result.get("match_type") == "unknown":
+            payload["presenter_needs_review"] = True
 
     mqtt_publish(payload, logger)
 
@@ -1802,12 +1811,8 @@ def cmd_record(args, logger: logging.Logger) -> int:
             sidecar_path = wav_path.replace(".wav", ".txt")
             if os.path.exists(sidecar_path):
                 update_sidecar_with_presenter(sidecar_path, presenter_result, logger)
-
-            # Send MQTT notification about presenter
-            notify_presenter_status(presenter_result, logger)
         except Exception as e:
             logger.warning(f"[presenter] Detection failed: {e}")
-            notify_presenter_status(None, logger)  # Notify that detection failed
 
     # Rebuild feed
     try:
@@ -1890,6 +1895,7 @@ def cmd_record(args, logger: logging.Logger) -> int:
         success=ia_success,
         url=ia_url,
         error=ia_error,
+        presenter_result=presenter_result,
         logger=logger,
     )
 
