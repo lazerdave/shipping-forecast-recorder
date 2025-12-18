@@ -8,6 +8,39 @@ Shipping Forecast Recorder - Specialized automated recorder for BBC Shipping For
 
 ## Recent Changes
 
+### 2025-12-17: MQTT Retain Flag
+
+Added `-r` (retain) flag to all MQTT publishes. The broker now stores the latest message on `shipping-forecast/status`, so new subscribers receive current status immediately on connect.
+
+### 2025-12-16: Crontab Watchdog & Recording Monitor
+
+**What Happened:**
+- Pi user's crontab was accidentally cleared by a `crontab -` command (reads from stdin; empty stdin = empty crontab)
+- Missed one day's recording (Dec 17 UTC) before discovery
+- Implemented safeguards to prevent future missed recordings
+
+**New Components:**
+- `crontab.backup` - Known-good crontab configuration for restoration
+- `watchdog.sh` - Verifies crontab integrity, auto-restores if missing, sends MQTT alert
+- `recording_monitor.sh` - Checks if today's recording exists, sends MQTT alert if missing
+- `/etc/cron.d/shipping-forecast-watchdog` - System cron (runs as root, independent of pi user)
+
+**Schedule:**
+- Watchdog runs every 2 hours + 10 min before recording (17:37 MST)
+- Recording monitor runs 30 min after expected completion (18:20 MST)
+
+**MQTT Alerts:**
+- Topic: `shipping-forecast/status`
+- Events: `watchdog_alert` (crontab issues), `recording_monitor` (missing/corrupted recordings)
+
+**Recovery:**
+- If crontab is cleared, watchdog automatically restores from backup
+- Manual restore: `crontab /home/pi/projects/shipping-forecast-recorder/crontab.backup`
+
+**Root Cause Prevention:**
+- Never run `crontab -` (reads from stdin) - use `crontab -l` to list, `crontab -e` to edit
+- System cron in `/etc/cron.d/` cannot be accidentally cleared by user crontab commands
+
 ### 2025-12-15: Automatic Presenter Detection
 
 **What Changed:**
@@ -106,6 +139,9 @@ The project has been consolidated into a single Python script with multiple comm
 - **test_anthem_detection.py** - Testing utility for anthem detection
 - **make_feed.py** - RSS feed generator helper
 - **requirements.txt** - Python dependencies (requests>=2.28.0, scipy, numpy)
+- **crontab.backup** - Known-good crontab for auto-restoration
+- **watchdog.sh** - Crontab integrity checker (runs from system cron)
+- **recording_monitor.sh** - Daily recording verification (runs from system cron)
 
 ## Commands
 
@@ -247,7 +283,23 @@ tail -f /home/pi/Shipping_Forecast_SDR_Recordings.log
 
 Check cron jobs:
 ```bash
-crontab -l
+crontab -l                                    # Pi user's crontab
+cat /etc/cron.d/shipping-forecast-watchdog    # System watchdog cron
+```
+
+Check watchdog status:
+```bash
+# Test watchdog (checks crontab, restores if needed)
+sudo /home/pi/projects/shipping-forecast-recorder/watchdog.sh
+
+# Test recording monitor (checks for today's recording)
+/home/pi/projects/shipping-forecast-recorder/recording_monitor.sh
+
+# View watchdog/monitor log entries
+strings /home/pi/Shipping_Forecast_SDR_Recordings.log | grep -E "WATCHDOG|MONITOR"
+
+# Manually restore crontab from backup
+crontab /home/pi/projects/shipping-forecast-recorder/crontab.backup
 ```
 
 View latest scan results:

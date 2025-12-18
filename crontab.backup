@@ -1,0 +1,14 @@
+
+# >>> KIWI-SDR AUTO (managed) >>>
+# Recompute this block daily just after midnight local:
+2 0 * * * /usr/bin/python3 /home/pi/kiwi_recorder.py setup >> /home/pi/Shipping_Forecast_SDR_Recordings.log 2>&1
+
+# Scan ~5 min before 00:47 London
+42 17 * * * /usr/bin/python3 /home/pi/kiwi_recorder.py scan >> /home/pi/Shipping_Forecast_SDR_Recordings.log 2>&1
+
+# Record at 00:47 London
+47 17 * * * /usr/bin/python3 /home/pi/kiwi_recorder.py record >> /home/pi/Shipping_Forecast_SDR_Recordings.log 2>&1
+
+# Weekly log trim (keep last 20000 lines), Sunday 00:20 local
+20 0 * * 0 /bin/bash -c 'tail -n 20000 "/home/pi/Shipping_Forecast_SDR_Recordings.log" > "/home/pi/Shipping_Forecast_SDR_Recordings.log.tmp" && mv "/home/pi/Shipping_Forecast_SDR_Recordings.log.tmp" "/home/pi/Shipping_Forecast_SDR_Recordings.log"'
+# <<< KIWI-SDR AUTO (managed) <<<
