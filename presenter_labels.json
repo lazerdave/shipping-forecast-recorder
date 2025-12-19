@@ -1,0 +1,579 @@
+{
+  "analyzed_at": "2025-12-18T09:32:20.534630",
+  "archive_path": "/mnt/rack-shipping",
+  "filters": {
+    "year": null,
+    "month": null,
+    "limit": null
+  },
+  "summary": {
+    "total_analyzed": 36,
+    "by_presenter": {
+      "NONE": 31,
+      "John Hammond": 3,
+      "Kelsey Bennett": 1,
+      "Richard Evans": 1
+    },
+    "by_match_type": {
+      "no_match": 16,
+      "unknown": 15,
+      "exact": 5
+    },
+    "suitable_for_training": {
+      "total": 5,
+      "by_presenter": {
+        "John Hammond": 3,
+        "Kelsey Bennett": 1,
+        "Richard Evans": 1
+      }
+    },
+    "unknowns": [
+      {
+        "filename": "ShippingFCST-251214_AM_004705UTC--g8gporx.proxy.kiwisdr--avg-37_processed.mp3",
+        "raw_match": "shipping bulletin",
+        "transcript": "the shipping bulletin on BBC sounds and show all his car this Christmas with a special festive  slee"
+      },
+      {
+        "filename": "ShippingFCST-251212_AM_004705UTC--g8gporx.proxy.kiwisdr--avg-37_processed.mp3",
+        "raw_match": "where we",
+        "transcript": "moderate or good, occasionally purer in northwest.  Arnomers in point to decayed wrath, south or sou"
+      },
+      {
+        "filename": "ShippingFCST-251211_AM_004705UTC--g8gporx.proxy.kiwisdr--avg-37_processed.mp3",
+        "raw_match": "highlights",
+        "transcript": "Dennis Warderman stars in the next installment of Nigel Baldwin's  Tought Political Thriller Burnt. "
+      },
+      {
+        "filename": "ShippingFCST-251210_AM_004705UTC--g8gporx.proxy.kiwisdr--avg-36_processed.mp3",
+        "raw_match": "Joanna Keen",
+        "transcript": "would occasionally pour. And that completes the shipping bulletin. And that brings us to  the end of"
+      },
+      {
+        "filename": "ShippingFCST-251206_AM_004706UTC--g8gporx.proxy.kiwisdr--avg-37_processed.mp3",
+        "raw_match": "tonight here",
+        "transcript": "Mull of contire to Ardenumurkin Point, east or south east six to Gail-Age veering south  or south we"
+      },
+      {
+        "filename": "ShippingFCST-251203_AM_004706UTC--g8gporx.proxy.kiwisdr--avg-36_processed.mp3",
+        "raw_match": "day here",
+        "transcript": "Thir south-west, backing southeast later, five to seven, showers, perhaps thundery, good,  occasiona"
+      },
+      {
+        "filename": "ShippingFCST-251202_AM_004705UTC--antskiwisdr.zapto.org--avg-47_processed.mp3",
+        "raw_match": "day here",
+        "transcript": "Double two to four become in the south, their southwest, five to seven, occasionally  gale eight lat"
+      },
+      {
+        "filename": "ShippingFCST-251129_AM_004707UTC--g8gporx.proxy.kiwisdr--avg-38_processed.mp3",
+        "raw_match": "day here",
+        "transcript": "Sightonic three to five becoming northerly four or five occasionally six and south,  rain at first i"
+      },
+      {
+        "filename": "ShippingFCST-251125_AM_004706UTC--g8gporx.proxy.kiwisdr--avg-36_processed.mp3",
+        "raw_match": "broadcasting here",
+        "transcript": "or Southwest 46, occasion E7, west of western art later, showers. Good. And Shetland  Arts, north or"
+      },
+      {
+        "filename": "ShippingFCST-251124_AM_004707UTC--21826.proxy.kiwisdr--avg-59_processed.mp3",
+        "raw_match": "really",
+        "transcript": "Mullipkin Tire to Ardemachan Point north or northeast five to seven backing north four to six  later"
+      },
+      {
+        "filename": "ShippingFCST-251119_AM_004705UTC--g8gporx.proxy.kiwisdr--avg-37_processed.mp3",
+        "raw_match": "where we",
+        "transcript": "five to seven, squally sleet or snow showers, moderate or good, occasionally very poor.  And the She"
+      },
+      {
+        "filename": "ShippingFCST-251117_AM_004706UTC--g8gporx.proxy.kiwisdr--avg-36_processed.mp3",
+        "raw_match": "where we",
+        "transcript": "Oh, squad, you're Christmas spirit. Make this a good one with nativity.  Are we ready to give it a g"
+      },
+      {
+        "filename": "ShippingFCST-251115_AM_004705UTC--g8gporx.proxy.kiwisdr--avg-37_processed.mp3",
+        "raw_match": "of animals",
+        "transcript": "a ringcoat, join me, Catherine Rundle, in exploring a world of extraordinary animals.  I'll be shari"
+      },
+      {
+        "filename": "ShippingFCST-251113_AM_004705UTC--g8gporx.proxy.kiwisdr--avg-37_processed.mp3",
+        "raw_match": "day here",
+        "transcript": "excessively poor.  Mull of Kintire, to Iron the Markin Point, North East,  Sextre Gaylate, rain in h"
+      },
+      {
+        "filename": "ShippingFCST-251110_AM_004703UTC--g8gporx.proxy.kiwisdr--avg-36_processed.mp3",
+        "raw_match": "broadcasting",
+        "transcript": "showers, good. Occasionally moderate. Meshatton Dials, South or Southeast, 3 to 5,  increasing 5 or "
+      }
+    ],
+    "errors": []
+  },
+  "results": [
+    {
+      "file": "/mnt/rack-shipping/2025/12/ShippingFCST-251218_AM_004705UTC--g8gporx.proxy.kiwisdr--avg-37_processed.mp3",
+      "filename": "ShippingFCST-251218_AM_004705UTC--g8gporx.proxy.kiwisdr--avg-37_processed.mp3",
+      "year": "2025",
+      "month": "12",
+      "timestamp": "2025-12-17T18:02:35.605073",
+      "presenter": null,
+      "raw_match": null,
+      "confidence": 0.0,
+      "match_type": "no_match",
+      "transcript": "moderate a good occasionally poor later.  Mollett can tire to Ardnemarkin Point,  south or south-west, five to seven increasing galeater times,  then becoming cyclonic three or four for a time later.  Squally showers then rain for a time later,  moderate a good occasionally poor.  Ardnemarkin Point to Cape Rav,  south or south-west, five to seven,  increasing galeater times,  then becoming cyclonic three to five for a time later.  Squally showers then rain for a time later,  moderate a good occasionally poor.  And Shetland miles, south or south-west,  five to seven occasionally for at first,  then backing southeast later,  shower is good occasionally moderate,  and that completes the shipping forecast.",
+      "suitable_for_training": false
+    },
+    {
+      "file": "/mnt/rack-shipping/2025/12/ShippingFCST-251216_AM_004705UTC--antskiwisdr.zapto.org--avg-53_processed.mp3",
+      "filename": "ShippingFCST-251216_AM_004705UTC--antskiwisdr.zapto.org--avg-53_processed.mp3",
+      "year": "2025",
+      "month": "12",
+      "timestamp": "2025-12-15T18:02:37.761538",
+      "presenter": "Kelsey Bennett",
+      "raw_match": "Kelsey Bennett",
+      "confidence": 1.0,
+      "match_type": "exact",
+      "transcript": "And it's where we part ways for the night, like a hundred of its wife Holley, for the  world service, will be written into it at night o'clock in the morning. And it's a big  day of celebration here in Radio 4, as was celebrating 250 years since the Jane Austen's  birth. Spring Sharts will be starting to evolve with an  Austen special at 11 o'clock. And in the afternoon the  London Scott's and Jackson Hyde's star in a dramatization of Austen flatters,  David and Tom, the real prime impregnative in that team fisting.  This is Kelsey Bennett, Earl County Hyde from London, from Vigilis from the  Liesren on my selfie. That's a fine peopleist thing.",
+      "suitable_for_training": true
+    },
+    {
+      "file": "/mnt/rack-shipping/2025/12/ShippingFCST-251215_AM_004705UTC--g8gporx.proxy.kiwisdr--avg-37_processed.mp3",
+      "filename": "ShippingFCST-251215_AM_004705UTC--g8gporx.proxy.kiwisdr--avg-37_processed.mp3",
+      "year": "2025",
+      "month": "12",
+      "timestamp": "2025-12-14T18:02:32.587296",
+      "presenter": "John Hammond",
+      "raw_match": "John Hammond",
+      "confidence": 1.0,
+      "match_type": "exact",
+      "transcript": "All these showers, good. Occasionally poor.  And the Shatton dials, west to the, or south west to the, five or six, but south west to  the, six to the, eight at first in east.  Showers, good. Occasionally poor at first in east.  And that completes the shipping, but it's in which means we're reaching the end of our  day's broadcasting here on Radio 4.  Plenty to keep the company over on Radio 4, extra through the night, in a moment tall.  And so is the BBC World Service, but we'll be back on air on BBC Radio 4 at five in the  morning with my colleague Alan Smith, but that's about it for the day here on Radio 4.  This is John Hammond in Broadcasting House in London.",
+      "suitable_for_training": true
+    },
+    {
+      "file": "/mnt/rack-shipping/2025/12/ShippingFCST-251214_AM_004705UTC--g8gporx.proxy.kiwisdr--avg-37_processed.mp3",
+      "filename": "ShippingFCST-251214_AM_004705UTC--g8gporx.proxy.kiwisdr--avg-37_processed.mp3",
+      "year": "2025",
+      "month": "12",
+      "timestamp": "2025-12-13T18:02:33.807754",
+      "presenter": null,
+      "raw_match": "shipping bulletin",
+      "confidence": 0.0,
+      "match_type": "unknown",
+      "transcript": "the shipping bulletin on BBC sounds and show all his car this Christmas with a special festive  sleeping forecast on Christmas Eve. Old Scrooge sat busy in his counting house.  Wrap yourself in timeless tunes with my Christmas cruners mix, classics from Bing Crosby to Michael  Brugley. And step back with soothing seasonal tracks on the mindful neck.  Get all kinds of Christmas-y, just search Christmas music on BBC sounds.  Well, it's just about one o'clock, so on behalf of all of my colleagues at Radio 4",
+      "suitable_for_training": false
+    },
+    {
+      "file": "/mnt/rack-shipping/2025/12/ShippingFCST-251213_AM_004706UTC--g8gporx.proxy.kiwisdr--avg-37_processed.mp3",
+      "filename": "ShippingFCST-251213_AM_004706UTC--g8gporx.proxy.kiwisdr--avg-37_processed.mp3",
+      "year": "2025",
+      "month": "12",
+      "timestamp": "2025-12-12T18:02:35.518542",
+      "presenter": null,
+      "raw_match": null,
+      "confidence": 0.0,
+      "match_type": "no_match",
+      "transcript": "to six, increasing six or seven, occasionally gal eight later,  rain later, good occasionally poor later.  Malovkin tied to Ardena Merkin point,  southwestily four to six,  backing Savily six to gal eight,  occasionally severe gal nine in north,  showers then rain, moderate or good, occasionally poor.  Ardena Merkin point to Kepera,  southwestily six to gal eight,  backing Savily seven to Savily nine for a time,  perhaps storm ten for a time later in northeast,  squallish showers, moderate or poor,  occasionally good at first.  Shuttland Isles, south or southwest,  five or six, increasing seven or gal eight later,  occasionally severe gal nine later,  Shuttland Isles, south, south, south, south, south, south, south.",
+      "suitable_for_training": false
+    },
+    {
+      "file": "/mnt/rack-shipping/2025/12/ShippingFCST-251212_AM_004705UTC--g8gporx.proxy.kiwisdr--avg-37_processed.mp3",
+      "filename": "ShippingFCST-251212_AM_004705UTC--g8gporx.proxy.kiwisdr--avg-37_processed.mp3",
+      "year": "2025",
+      "month": "12",
+      "timestamp": "2025-12-11T18:02:34.756705",
+      "presenter": null,
+      "raw_match": "where we",
+      "confidence": 0.0,
+      "match_type": "unknown",
+      "transcript": "moderate or good, occasionally purer in northwest.  Arnomers in point to decayed wrath, south or south-west, four to six,  increasing six to gale eight, showers becoming squally good, occasionally purer.  And to the Seltland Isles, south or south-west, four to six, occasionally seven later,  occasional rain out first, showers later, moderate or good, occasionally purer at first.  And that completes the shipping bulletin.  And this is where we sign off for the night here on Radio 4,  we'll be handing over to the World Service, who will be with you throughout the night.  Well, it's just about one o'clock.",
+      "suitable_for_training": false
+    },
+    {
+      "file": "/mnt/rack-shipping/2025/12/ShippingFCST-251211_AM_004705UTC--g8gporx.proxy.kiwisdr--avg-37_processed.mp3",
+      "filename": "ShippingFCST-251211_AM_004705UTC--g8gporx.proxy.kiwisdr--avg-37_processed.mp3",
+      "year": "2025",
+      "month": "12",
+      "timestamp": "2025-12-10T18:02:36.010874",
+      "presenter": null,
+      "raw_match": "highlights",
+      "confidence": 0.0,
+      "match_type": "unknown",
+      "transcript": "Dennis Warderman stars in the next installment of Nigel Baldwin's  Tought Political Thriller Burnt. Among tomorrow's highlights on BBC Radio 4,  this natural life tomorrow, Martha Carnie meets Jane Anderson, one of the UK's  leading physicians in HIV medicine to learn about the living library of plants  at the Chelsea Physic Garden. Don't forget, on Friday, Dead Ringers is back for the  first of a couple of Christmas specials. That's at 6.30 and there's always our  Celebrating Jane Austin Collection on BBC sounds all the novels, new adaptations of  Pride and Prejudice and Sense and Sensibility, and factual programs  celebrating her legacy and impact. Plenty to get you through the night then,  until 5 a.m. when Tom Sanders will be back in",
+      "suitable_for_training": false
+    },
+    {
+      "file": "/mnt/rack-shipping/2025/12/ShippingFCST-251210_AM_004705UTC--g8gporx.proxy.kiwisdr--avg-36_processed.mp3",
+      "filename": "ShippingFCST-251210_AM_004705UTC--g8gporx.proxy.kiwisdr--avg-36_processed.mp3",
+      "year": "2025",
+      "month": "12",
+      "timestamp": "2025-12-09T18:02:31.759447",
+      "presenter": null,
+      "raw_match": "Joanna Keen",
+      "confidence": 0.0,
+      "match_type": "unknown",
+      "transcript": "would occasionally pour. And that completes the shipping bulletin. And that brings us to  the end of our day's broadcasting here on BBC Radio 4. In a moment we'll join the BBC  World Service, he'll take us through the night before we return at five o'clock in the  morning. Alan Smith will have the news and then you can hear the latest from Westminster  in yesterday in Parliament. Overnight our digital sister station Radio 4 Extra has a mix of  comedy, drama and factual programs, all this classical music over on Radio 3. Thank you  for your company this evening. This is Joanna Keen in Broadcasting House in London.",
+      "suitable_for_training": false
+    },
+    {
+      "file": "/mnt/rack-shipping/2025/12/ShippingFCST-251209_AM_004706UTC--ixworthsdr.hopto.org--avg-42_processed.mp3",
+      "filename": "ShippingFCST-251209_AM_004706UTC--ixworthsdr.hopto.org--avg-42_processed.mp3",
+      "year": "2025",
+      "month": "12",
+      "timestamp": "2025-12-08T18:02:32.907436",
+      "presenter": null,
+      "raw_match": null,
+      "confidence": 0.0,
+      "match_type": "no_match",
+      "transcript": "Rain or Squally showers, moderate or good, occasionally poor.  Odin American points to Cape Rath south four or five, back in east or south east six  to gale eight, veering southwest severe gale nine to violin storm eleven later.  Rain or Squally showers, moderate or poor.  South West three or four, back in east seven to severe gale nine, veering south east six to gale eight later, showers at first, rain later, good, becoming moderate or poor later.  And that completes the shipping bulletin, and that's all from us here at B-",
+      "suitable_for_training": false
+    },
+    {
+      "file": "/mnt/rack-shipping/2025/12/ShippingFCST-251208_AM_004706UTC--g8gporx.proxy.kiwisdr--avg-37_processed.mp3",
+      "filename": "ShippingFCST-251208_AM_004706UTC--g8gporx.proxy.kiwisdr--avg-37_processed.mp3",
+      "year": "2025",
+      "month": "12",
+      "timestamp": "2025-12-07T18:02:36.245555",
+      "presenter": null,
+      "raw_match": null,
+      "confidence": 0.0,
+      "match_type": "no_match",
+      "transcript": "occasionally poor at first.  Mull of contire to Ardenmerkend Point.  South or southwest, four or five,  increasing six or seven for a time,  then backing southeast three to five later.  Showers squally for a time at first.  Moderate or good occasionally poor.  Ardenmerkend Point to Cape Rath.  Cyclonic four at first in far north,  otherwise southerly or southwestily four to six.  Rain or showers, moderate or good,  occasionally poor.  Shetlandiles, east or south east five to seven,  veering south or south east three to five,  then southwest three or four later.  Rain or showers, moderate or good,  occasionally poor until later.",
+      "suitable_for_training": false
+    },
+    {
+      "file": "/mnt/rack-shipping/2025/12/ShippingFCST-251207_AM_004705UTC--g8gporx.proxy.kiwisdr--avg-37_processed.mp3",
+      "filename": "ShippingFCST-251207_AM_004705UTC--g8gporx.proxy.kiwisdr--avg-37_processed.mp3",
+      "year": "2025",
+      "month": "12",
+      "timestamp": "2025-12-06T18:02:34.449229",
+      "presenter": null,
+      "raw_match": null,
+      "confidence": 0.0,
+      "match_type": "no_match",
+      "transcript": "or southwest to be five to seven later, showers and rain for time, good becoming  moderate or poor for time. Mollaf can tie to Ardhamurkan point, south or  southwest three to five, backing east or south east four to six, bearing west or  southwest five to seven later, showers then rain for time, good becoming  moderate or poor for time. Ardhamurkan point to Cape Ruff, psychotic becoming  south east for time three to five, occasionally six later, showers then rain for  time later, good becoming moderate or poor for time later. Shatlandiles, east or  south east five or six, increasing seven at times, rain or showers, moderate or  good, occasionally poor. That completes the shipping bulletin and",
+      "suitable_for_training": false
+    },
+    {
+      "file": "/mnt/rack-shipping/2025/12/ShippingFCST-251206_AM_004706UTC--g8gporx.proxy.kiwisdr--avg-37_processed.mp3",
+      "filename": "ShippingFCST-251206_AM_004706UTC--g8gporx.proxy.kiwisdr--avg-37_processed.mp3",
+      "year": "2025",
+      "month": "12",
+      "timestamp": "2025-12-05T18:02:34.629913",
+      "presenter": null,
+      "raw_match": "tonight here",
+      "confidence": 0.0,
+      "match_type": "unknown",
+      "transcript": "Mull of contire to Ardenumurkin Point, east or south east six to Gail-Age veering south  or south west three to five occasionally six later, showers, moderate or good.  Ardenumurkin Point to Cape Rath, east to Lior south east to Lye five to seven occasionally  Gail-Age at first decreasing three to five veering south west later in south, rain or showers, moderate  or good occasionally poor. Shatendals south east six or seven occasionally Gail-Age until  later, showers, good occasionally poor. I complete the shipping bulletin and brings us to the  end of our schedule for the day. Thanks for being with us tonight here on Radio 4 from",
+      "suitable_for_training": false
+    },
+    {
+      "file": "/mnt/rack-shipping/2025/12/ShippingFCST-251205_AM_004704UTC--g8gporx.proxy.kiwisdr--avg-37_processed.mp3",
+      "filename": "ShippingFCST-251205_AM_004704UTC--g8gporx.proxy.kiwisdr--avg-37_processed.mp3",
+      "year": "2025",
+      "month": "12",
+      "timestamp": "2025-12-04T18:02:34.581305",
+      "presenter": "John Hammond",
+      "raw_match": "John Hammond",
+      "confidence": 1.0,
+      "match_type": "exact",
+      "transcript": "Ardemurfen point to Cape Ruff, south or south east, four to six, increasing six to  gale eights later, perhaps severe gale nine later in far south, showers their  occasional rain later, moderate or good, occasionally poor later.  Anachetan dials, south or southeast, four to six, increasing six to gale eights later,  showers good, occasionally moderate.  And that completes a rather busy shipping bulletin, and that's all we have time for  now on radio for tonight, but we'll be back in the morning with my colleague,  Alan Smith, starting up at five in the morning.  This is John Hammond in Broadcasting House in London.",
+      "suitable_for_training": true
+    },
+    {
+      "file": "/mnt/rack-shipping/2025/12/ShippingFCST-251204_AM_004704UTC--g8gporx.proxy.kiwisdr--avg-37_processed.mp3",
+      "filename": "ShippingFCST-251204_AM_004704UTC--g8gporx.proxy.kiwisdr--avg-37_processed.mp3",
+      "year": "2025",
+      "month": "12",
+      "timestamp": "2025-12-03T18:02:34.532971",
+      "presenter": null,
+      "raw_match": null,
+      "confidence": 0.0,
+      "match_type": "no_match",
+      "transcript": "5-7, then south-westernly 4-5-late-a, Reynold showers, Moldrich or good, occasionally  poor. Mollefkin to art at the American point, south or south east becoming cyclonic 4-6,  then south or south west 4-5-late-a, Reynold showers, Moldrich or good, occasionally poor.  At the American point to Cape Wrath, southly or south eastally 4-6, Reynold or showers,  Moldrich or good, occasionally poor. Shirtlandiles, south backing south east 4-6, showers,  Moldrich or good. Out of that completes the shipping border to\u2026",
+      "suitable_for_training": false
+    },
+    {
+      "file": "/mnt/rack-shipping/2025/12/ShippingFCST-251203_AM_004706UTC--g8gporx.proxy.kiwisdr--avg-36_processed.mp3",
+      "filename": "ShippingFCST-251203_AM_004706UTC--g8gporx.proxy.kiwisdr--avg-36_processed.mp3",
+      "year": "2025",
+      "month": "12",
+      "timestamp": "2025-12-02T18:02:35.574495",
+      "presenter": null,
+      "raw_match": "day here",
+      "confidence": 0.0,
+      "match_type": "unknown",
+      "transcript": "Thir south-west, backing southeast later, five to seven, showers, perhaps thundery, good,  occasionally poor.  I, at the mark and point, decay breath.  South-thir south-west, five to seven, occasionally gale eight until later.  Shower's, perhaps thundery, good, occasionally poor.  And shetland miles, south-thir south-east, four to six, showers, possibly thundery, good,  occasionally poor.  And that completes the shipping forecast, and that's it for another day here on BBC Radio  4.  There are a few moments we'll join the world's service for the news at 1am with Moira Alderson  in the meantime from me, our\u2014",
+      "suitable_for_training": false
+    },
+    {
+      "file": "/mnt/rack-shipping/2025/12/ShippingFCST-251202_AM_004705UTC--antskiwisdr.zapto.org--avg-47_processed.mp3",
+      "filename": "ShippingFCST-251202_AM_004705UTC--antskiwisdr.zapto.org--avg-47_processed.mp3",
+      "year": "2025",
+      "month": "12",
+      "timestamp": "2025-12-01T18:02:36.606720",
+      "presenter": null,
+      "raw_match": "day here",
+      "confidence": 0.0,
+      "match_type": "unknown",
+      "transcript": "Double two to four become in the south, their southwest, five to seven, occasionally  gale eight later. Rain at first, them from the rain showers, good occasion on  the poor. And Chetaniles, they will two to four become in  the south, five to seven, occasionally gale eight in northeast, then becoming  southerly, south-westally, four to six later. Rain at times, chance later, moderate,  a good, occasionally poor. And that completes the shipping forecast. While that's  it for another day here on BBC Radio four in a few moments, we'll turn the world  service for the use of one again with new, new, new, new desk.",
+      "suitable_for_training": false
+    },
+    {
+      "file": "/mnt/rack-shipping/2025/12/ShippingFCST-251201_AM_004705UTC--g8gporx.proxy.kiwisdr--avg-37_processed.mp3",
+      "filename": "ShippingFCST-251201_AM_004705UTC--g8gporx.proxy.kiwisdr--avg-37_processed.mp3",
+      "year": "2025",
+      "month": "12",
+      "timestamp": "2025-11-30T18:02:34.832555",
+      "presenter": null,
+      "raw_match": null,
+      "confidence": 0.0,
+      "match_type": "no_match",
+      "transcript": "Mollip can tie to Ardenmarken Point, south 5-7, Viering west, south west 3-5, occasionally 6  later, Rain then showers good occasionally poor. Ardenmarken Point to Cape Raff, south  1-6-8, Viering south west 4-6, decreasing 3-8-8, Rain then showers good occasionally poor.  And Shetland Isles, south east 3-5, increasing 6-8, Viering south west 4-6, decreasing 2-4  later, Rain for a time, good occasionally poor. And that completes the shipping forecast  and that's it from all the day here on BPCR.",
+      "suitable_for_training": false
+    },
+    {
+      "file": "/mnt/rack-shipping/2025/11/ShippingFCST-251130_AM_004708UTC--g8gporx.proxy.kiwisdr--avg-36_processed.mp3",
+      "filename": "ShippingFCST-251130_AM_004708UTC--g8gporx.proxy.kiwisdr--avg-36_processed.mp3",
+      "year": "2025",
+      "month": "11",
+      "timestamp": "2025-11-29T18:02:49.145739",
+      "presenter": null,
+      "raw_match": null,
+      "confidence": 0.0,
+      "match_type": "no_match",
+      "transcript": "Northwest, 4 to 6 backing, Southwest, 3 or 4, showers at first, rain later, good, occasionally  poor later.  Mullip Gallery to Mullip Kintai, including the Firth of Clyde, and North's Channel,  Northwestity, 4 to 6 backing, Southwestity, 2 to 4, showers, rain later, good occasionally,  poor later.  Mullip Kintai to Arden Muck & Point, North 4 or 5, becoming variable 3 or less, then South  3 to 5, showers, rain later, good occasionally, poor.  Arden Muck & Point, Kint Rob, North or Northeast, Varying, Southeast, 3 to 5, showers, rain  later, good occasionally, poor.  Mullip Kintai to Arden Muck & Point, North 4 or 5, becoming variable 3 or 4, showers, rain",
+      "suitable_for_training": false
+    },
+    {
+      "file": "/mnt/rack-shipping/2025/11/ShippingFCST-251129_AM_004707UTC--g8gporx.proxy.kiwisdr--avg-38_processed.mp3",
+      "filename": "ShippingFCST-251129_AM_004707UTC--g8gporx.proxy.kiwisdr--avg-38_processed.mp3",
+      "year": "2025",
+      "month": "11",
+      "timestamp": "2025-11-28T18:02:41.893317",
+      "presenter": null,
+      "raw_match": "day here",
+      "confidence": 0.0,
+      "match_type": "unknown",
+      "transcript": "Sightonic three to five becoming northerly four or five occasionally six and south,  rain at first in the south, otherwise showers, moderate a good occasionally poor at first in south.  At the mworkin points to came rough, north or north west four or five,  varying north or northeast three to five later, showers perhaps wintry at times moderate a good occasionally poor.  And Shetland isles, north west six to gale eight, varying northerly five or six occasionally four later,  showers, scourly at first in wintry at times moderate a good occasionally poor at first.  Now that completes the shipping forecast and that's it for another day here on BBC.",
+      "suitable_for_training": false
+    },
+    {
+      "file": "/mnt/rack-shipping/2025/11/ShippingFCST-251128_AM_004705UTC--g8gporx.proxy.kiwisdr--avg-37_processed.mp3",
+      "filename": "ShippingFCST-251128_AM_004705UTC--g8gporx.proxy.kiwisdr--avg-37_processed.mp3",
+      "year": "2025",
+      "month": "11",
+      "timestamp": "2025-11-27T18:02:38.071692",
+      "presenter": null,
+      "raw_match": null,
+      "confidence": 0.0,
+      "match_type": "no_match",
+      "transcript": "Mollop gallway to Mollop Kintai, including the Firth of Clyde and North Channel, south-west  Delhi, 6th to Gail 8 occasionally, Sivir Gail 9 at first in North, Scourly Shires,  Moderator Gert occasionally poor. Mollop Kintai to Anumurkan Point, south-west  Delhi, 70th to Sivir Gail 9 occasionally, Storm 10 at first in North and West, Reyna  North, Scourly Shires, Moderator poor. Arumurkan Point, Cape Raff, south-west Gail 8  to Storm 10, Wheeling West or North West 6 to Gail 8, Reyna North, Scourly Shires, Moderator  poor occasionally, Gert. Shutland Isles, south-west, 70th to Sivir Gail 9, increasing  Storm 10 at first in North and West, 70th to Storm 10 at first in North and West, 70th",
+      "suitable_for_training": false
+    },
+    {
+      "file": "/mnt/rack-shipping/2025/11/ShippingFCST-251127_AM_004705UTC--g8gporx.proxy.kiwisdr--avg-36_processed.mp3",
+      "filename": "ShippingFCST-251127_AM_004705UTC--g8gporx.proxy.kiwisdr--avg-36_processed.mp3",
+      "year": "2025",
+      "month": "11",
+      "timestamp": "2025-11-26T18:02:37.320711",
+      "presenter": "John Hammond",
+      "raw_match": "John Hammond",
+      "confidence": 1.0,
+      "match_type": "exact",
+      "transcript": "Gail 8, then increasing severe Gail 9 or storm 10 later, rain, then squalley showers,  moderate or poor, occasionally good.  And the Shetland Dials, variable 2-4, becoming cyclonic 5-7, then south-west 7-7 to severe  Gail 9 later, rain or drizzle, moderate or good, occasionally poor.  And that completes the shipping bulletin, which of course means we're reaching the end  of our days broadcasting here on BBC Radio 4.  We'll be back on air on Radio 4 5 in the morning with my colleague, Jane Steele, and then  I'll pop up a little bit later on in the day at lunchtime.  But that's it for the day here now on Radio 4.  This is John Hammond.",
+      "suitable_for_training": true
+    },
+    {
+      "file": "/mnt/rack-shipping/2025/11/ShippingFCST-251125_AM_004706UTC--g8gporx.proxy.kiwisdr--avg-36_processed.mp3",
+      "filename": "ShippingFCST-251125_AM_004706UTC--g8gporx.proxy.kiwisdr--avg-36_processed.mp3",
+      "year": "2025",
+      "month": "11",
+      "timestamp": "2025-11-24T18:02:35.234996",
+      "presenter": null,
+      "raw_match": "broadcasting here",
+      "confidence": 0.0,
+      "match_type": "unknown",
+      "transcript": "or Southwest 46, occasion E7, west of western art later, showers. Good. And Shetland  Arts, north or northeast, three to five, occasion E6 at first in east, becoming variable two  to four, the Southwest 46 later, showers becoming mainly fair. Good. And that completes the  shipping bulletin. And that brings us to the end of our day's broadcasting here on BBC  Radio 4. In a moment, we'll join the BBC World Service who will take us through the night before  we return at five o'clock. Charles Carroll will have the news and then you can hear the latest  from Westminster in yesterday in Parliament. Thank you.",
+      "suitable_for_training": false
+    },
+    {
+      "file": "/mnt/rack-shipping/2025/11/ShippingFCST-251124_AM_004707UTC--21826.proxy.kiwisdr--avg-59_processed.mp3",
+      "filename": "ShippingFCST-251124_AM_004707UTC--21826.proxy.kiwisdr--avg-59_processed.mp3",
+      "year": "2025",
+      "month": "11",
+      "timestamp": "2025-11-23T18:02:38.575442",
+      "presenter": null,
+      "raw_match": "really",
+      "confidence": 0.0,
+      "match_type": "unknown",
+      "transcript": "Mullipkin Tire to Ardemachan Point north or northeast five to seven backing north four to six  later showers moderate or good. Ardemachan Point to K-Graph north east five to seven backing north  four to six later showers mainly fair later good. Shetland Isles north or northeast four to six  showers good occasionally moderate and that completes the shipping bulletin and the clock is creeping  towards one o'clock it'll be time shortly for BBC Radio 4 to pull down the blinds and hand  over to the BBC World Service. We're back at five a.m. when Caroline Nichols will be in this chair  until then this is really...",
+      "suitable_for_training": false
+    },
+    {
+      "file": "/mnt/rack-shipping/2025/11/ShippingFCST-251123_AM_004707UTC--g8gporx.proxy.kiwisdr--avg-37_processed.mp3",
+      "filename": "ShippingFCST-251123_AM_004707UTC--g8gporx.proxy.kiwisdr--avg-37_processed.mp3",
+      "year": "2025",
+      "month": "11",
+      "timestamp": "2025-11-22T18:02:36.311819",
+      "presenter": null,
+      "raw_match": null,
+      "confidence": 0.0,
+      "match_type": "no_match",
+      "transcript": "for the long, westily or south-westily, five or six occasionally seven at first in  south, rain then showers good occasionally poor at first.  Mull of Galloway to Mull of Kintai, including the Firth of Clyde and North Channel, westily  or south-westily, five or six occasionally seven at first in Mull of Galloway, rain then  showers good occasionally poor.  Mull of Kintai to an American point, west or north-west, four to six, decreasing two to four  showers good occasionally moderate.  Under Mull of Kintai to Cape Raff, west or south-west backing south east, later three to five, showers good.  Shuttland Isles, west or south-west three to five.",
+      "suitable_for_training": false
+    },
+    {
+      "file": "/mnt/rack-shipping/2025/11/ShippingFCST-251122_AM_004706UTC--g8gporx.proxy.kiwisdr--avg-37_processed.mp3",
+      "filename": "ShippingFCST-251122_AM_004706UTC--g8gporx.proxy.kiwisdr--avg-37_processed.mp3",
+      "year": "2025",
+      "month": "11",
+      "timestamp": "2025-11-21T18:02:36.734547",
+      "presenter": null,
+      "raw_match": null,
+      "confidence": 0.0,
+      "match_type": "no_match",
+      "transcript": "All the way, decreasing 3 to 5, rain then showers, good occasionally poor at first.  We'll look inside to Ardenhamurken Point, west or north-west, 4 to 6, decreasing 2 to 4,  backing south or south-east, 3 to 5 later, showers, good occasionally moderate.  Ardenhamurken Point to Cape Breath, west or south-west, backing south-east later, 3 to 5, occasionally  2 later, showers, good occasionally poor.  Chetan Diles, west or south-west, 3 to 5, becoming variable 2 to 4 later, showers moderate  or good occasionally poor at first, and that completes the shipping bulletin and indeed",
+      "suitable_for_training": false
+    },
+    {
+      "file": "/mnt/rack-shipping/2025/11/ShippingFCST-251121_AM_004706UTC--g8gporx.proxy.kiwisdr--avg-37_processed.mp3",
+      "filename": "ShippingFCST-251121_AM_004706UTC--g8gporx.proxy.kiwisdr--avg-37_processed.mp3",
+      "year": "2025",
+      "month": "11",
+      "timestamp": "2025-11-20T18:02:44.154943",
+      "presenter": "Richard Evans",
+      "raw_match": "Richard Evans",
+      "confidence": 1.0,
+      "match_type": "exact",
+      "transcript": "installment of John Peacock's Victorian Detective Thriller, the Kittenhouser.  Radio 4 returns at 5 a.m. when Vigialis will be in this chair, we'll hope you'll be  able to join us then for that or for the rest of the good stuff we've got for you tomorrow,  including Sir Tim Berners-Lee on Desert Island Disks at 9 a.m. and a special edition of the  Food program from the BBC Food and Farming Awards in Bristol at 11 a.m. Just a couple of  the highlights here on BBC Radio 4 tomorrow morning. Until then, this is Richard Evans  about to head off home and behalf of all of us here at...",
+      "suitable_for_training": true
+    },
+    {
+      "file": "/mnt/rack-shipping/2025/11/ShippingFCST-251119_AM_004705UTC--g8gporx.proxy.kiwisdr--avg-37_processed.mp3",
+      "filename": "ShippingFCST-251119_AM_004705UTC--g8gporx.proxy.kiwisdr--avg-37_processed.mp3",
+      "year": "2025",
+      "month": "11",
+      "timestamp": "2025-11-19T20:18:40.184144",
+      "presenter": null,
+      "raw_match": "where we",
+      "confidence": 0.0,
+      "match_type": "unknown",
+      "transcript": "five to seven, squally sleet or snow showers, moderate or good, occasionally very poor.  And the Shetland Isles, normally five to seven, occasionally gale eight later, then  veering northeasterly later in north, squally sleet or snow showers, moderate or good, occasionally  very poor.  And that completes the shipping bulletin.  And this is where we sign off for the night, we'll be handing over in a moment to the  World Service who we with you throughout the night.  But if you're staying up and prefer something else, there's another option over on Radio  4 Extra for London particulars, John Peacock, Spectorian detective thriller, that when the  Bow Street Runners were superseded by the London Matt Police.",
+      "suitable_for_training": false
+    },
+    {
+      "file": "/mnt/rack-shipping/2025/11/ShippingFCST-251118_AM_004706UTC--g8gporx.proxy.kiwisdr--avg-36_processed.mp3",
+      "filename": "ShippingFCST-251118_AM_004706UTC--g8gporx.proxy.kiwisdr--avg-36_processed.mp3",
+      "year": "2025",
+      "month": "11",
+      "timestamp": "2025-11-19T20:18:08.864577",
+      "presenter": null,
+      "raw_match": null,
+      "confidence": 0.0,
+      "match_type": "no_match",
+      "transcript": "eight laser near call and tirey. Rain then showers becoming  wind-tree-later, good occasionally poor. Ardenmerkin point to  Cape Rath, variable two to four becoming cyclonic four to six,  then north or northeast six to Gail eight laser. Rain or showers  becoming squally and wind-tree-later, moderate or good occasionally  poor. And Shatland Isles, north or northwest five or six occasionally  four at first and seven laser, squally sleet or snow showers,  moderate or good occasionally very poor. I complete the shipping  bulletin and indeed our schedule of programs for the day,  which means we'll be handing over to the world service to give us  going until radio four resumes at five in the morning. Thanks",
+      "suitable_for_training": false
+    },
+    {
+      "file": "/mnt/rack-shipping/2025/11/ShippingFCST-251117_AM_004706UTC--g8gporx.proxy.kiwisdr--avg-36_processed.mp3",
+      "filename": "ShippingFCST-251117_AM_004706UTC--g8gporx.proxy.kiwisdr--avg-36_processed.mp3",
+      "year": "2025",
+      "month": "11",
+      "timestamp": "2025-11-19T20:17:39.940974",
+      "presenter": null,
+      "raw_match": "where we",
+      "confidence": 0.0,
+      "match_type": "unknown",
+      "transcript": "Oh, squad, you're Christmas spirit. Make this a good one with nativity.  Are we ready to give it a go? The holiday.  Okay, let's go.  For you, Jones is diary.  That's the one. Not more.  Sounds perfect.  Bestive film favourites on BBC iPlayer.  Yes, it's coming up on us.  Well, this is where we sign off for the night.  We'll be handing over to the world service.  He'll be with you throughout the night.  And if you're staying up and prefer something else, there's another option for you  over on Radio 4 Extra.  Pradesh at Island Discs revisited famed as a Winston Churchill actor Robert Hardy  shares his castaway choices with Chrissy Young.  That's back from 2011.  Well, it is just about one o'clock.  So on behalf of all of my colleagues.",
+      "suitable_for_training": false
+    },
+    {
+      "file": "/mnt/rack-shipping/2025/11/ShippingFCST-251116_AM_004706UTC--g8gporx.proxy.kiwisdr--avg-38_processed.mp3",
+      "filename": "ShippingFCST-251116_AM_004706UTC--g8gporx.proxy.kiwisdr--avg-38_processed.mp3",
+      "year": "2025",
+      "month": "11",
+      "timestamp": "2025-11-19T20:17:11.705357",
+      "presenter": null,
+      "raw_match": null,
+      "confidence": 0.0,
+      "match_type": "no_match",
+      "transcript": "The birthday of the actor and writer, Gryffries Jones, born on this date in 1953, in Cardiff,  where the sun will rise a little after 7.30 and set at 20 past four.  In a couple of minutes, we'll join the BBC World Service, he'll take us through the night,  before we return at 5.30 in the morning with the shipping bulletin.  Earlier today we had a wonderful profile of the artist David Hulkney, that's on BBC Sounds.  Now, if you missed it, well worth a listen. He also heard from John Lloyd on loose ends,  the comedy producer, and learned a bit about the science of brain computer interfaces in  the infinite monkey cage. But for now, thank you very much for your company this evening,  it's Tom Sanders here.",
+      "suitable_for_training": false
+    },
+    {
+      "file": "/mnt/rack-shipping/2025/11/ShippingFCST-251115_AM_004705UTC--g8gporx.proxy.kiwisdr--avg-37_processed.mp3",
+      "filename": "ShippingFCST-251115_AM_004705UTC--g8gporx.proxy.kiwisdr--avg-37_processed.mp3",
+      "year": "2025",
+      "month": "11",
+      "timestamp": "2025-11-19T20:16:42.889745",
+      "presenter": null,
+      "raw_match": "of animals",
+      "confidence": 0.0,
+      "match_type": "unknown",
+      "transcript": "a ringcoat, join me, Catherine Rundle, in exploring a world of extraordinary animals.  I'll be sharing stories of how they've shaped and been shaped by human history at a time  when many could be facing extinction. A celebration of nature and its extraordinary intelligence  and a stark reminder of what we have to lose. A carnival of animals from Radio 4 listened  to all episodes on BBC Sounds. We're about to hand to the world's service here to keep us going  on this frequency while Radio 4 is off for the night. Alan Smith will be back in a few hours  from now at half past 5 to open up for the new day. Thanks for your company this evening.",
+      "suitable_for_training": false
+    },
+    {
+      "file": "/mnt/rack-shipping/2025/11/ShippingFCST-251113_AM_004705UTC--g8gporx.proxy.kiwisdr--avg-37_processed.mp3",
+      "filename": "ShippingFCST-251113_AM_004705UTC--g8gporx.proxy.kiwisdr--avg-37_processed.mp3",
+      "year": "2025",
+      "month": "11",
+      "timestamp": "2025-11-19T20:16:13.662134",
+      "presenter": null,
+      "raw_match": "day here",
+      "confidence": 0.0,
+      "match_type": "unknown",
+      "transcript": "excessively poor.  Mull of Kintire, to Iron the Markin Point, North East,  Sextre Gaylate, rain in her showers moderate a good occasionally poor in south.  Iron the Markin Point, Decay Braith, North East, Sextre Gaylate,  decreasing four to six later showers moderate a good.  And Shetland Isles, north east, six to Galate, decreasing forty-six later, showers moderate  a good, and that completes the shipping forecast.  Well that's it for another day here on BBC Radio 4, and a few moments will join the  World Service for the news at Monayam with David Harper.  In the meantime on behalf of Vigiala Sidney.",
+      "suitable_for_training": false
+    },
+    {
+      "file": "/mnt/rack-shipping/2025/11/ShippingFCST-251112_AM_004704UTC--g8gporx.proxy.kiwisdr--avg-37_processed.mp3",
+      "filename": "ShippingFCST-251112_AM_004704UTC--g8gporx.proxy.kiwisdr--avg-37_processed.mp3",
+      "year": "2025",
+      "month": "11",
+      "timestamp": "2025-11-19T20:15:43.106535",
+      "presenter": null,
+      "raw_match": null,
+      "confidence": 0.0,
+      "match_type": "no_match",
+      "transcript": "northerly or north-westily, four to six, then veering north-eastily later, occasionally  seven later in north. Occasional rain, then showers, moderate occasionally poor, becoming  good.  At the market point to Kebraath, cyclonic four to six, becoming north, or northeast, five  to seven, increasing galeater times, rain, then squally showers, moderate a good occasionally  poor. And Shetland Niles, east three to five, backing north, or northeast, six to gale,  eight, then occasionally five again later. Rain, or showers, becoming squally, moderate  a good occasionally poor. And that completes the shipping forecast. And that's it for another  day here on Bebe...",
+      "suitable_for_training": false
+    },
+    {
+      "file": "/mnt/rack-shipping/2025/11/ShippingFCST-251111_AM_004705UTC--g8gporx.proxy.kiwisdr--avg-38_processed.mp3",
+      "filename": "ShippingFCST-251111_AM_004705UTC--g8gporx.proxy.kiwisdr--avg-38_processed.mp3",
+      "year": "2025",
+      "month": "11",
+      "timestamp": "2025-11-19T20:15:13.030926",
+      "presenter": null,
+      "raw_match": null,
+      "confidence": 0.0,
+      "match_type": "no_match",
+      "transcript": "southeast, and veering southwest later, three or four, increasing four to six, showers  then rain for a time, good becoming moderate or poor for a time.  The American point to Cape Rath, cyclonic two to four, becoming easterly or north easterly  later, four to six later, showers, rain later, good occasionally poor later.  Atlanta House, south or south east three to five, veering southwest, becoming cyclonic  four to six later, occasional rain or showers, moderate or good occasionally poor.",
+      "suitable_for_training": false
+    },
+    {
+      "file": "/mnt/rack-shipping/2025/11/ShippingFCST-251110_AM_004703UTC--g8gporx.proxy.kiwisdr--avg-36_processed.mp3",
+      "filename": "ShippingFCST-251110_AM_004703UTC--g8gporx.proxy.kiwisdr--avg-36_processed.mp3",
+      "year": "2025",
+      "month": "11",
+      "timestamp": "2025-11-19T20:14:42.755314",
+      "presenter": null,
+      "raw_match": "broadcasting",
+      "confidence": 0.0,
+      "match_type": "unknown",
+      "transcript": "showers, good. Occasionally moderate. Meshatton Dials, South or Southeast, 3 to 5,  increasing 5 or 6 later. Rain or showers, moderate or good. Occasionally poor.  That completes the shipping bulletin, which of course means we're reaching the end of our day's  broadcasting on Radio 4 in a moment on, hand us over to the BBC World Service. Over on Radio 4,  extra through the night, there's plenty going on, desert island disc revisited, starting just  now from Noel Coward to Frank Sinatra. The much loved actress, June Whitfield, shared her  castaway choices with Sue Lawley. That's from 1990. That's it for the day here on Radio 4,  and we're back in the morning with my-",
+      "suitable_for_training": false
+    },
+    {
+      "file": "/mnt/rack-shipping/2025/11/ShippingFCST-251120_AM_005954UTC--g8gporx.proxy.kiwisdr--avg-35_processed.mp3",
+      "filename": "ShippingFCST-251120_AM_005954UTC--g8gporx.proxy.kiwisdr--avg-35_processed.mp3",
+      "year": "2025",
+      "month": "11",
+      "timestamp": "2025-11-19T20:13:22.668312",
+      "presenter": null,
+      "raw_match": null,
+      "confidence": 0.0,
+      "match_type": "no_match",
+      "transcript": "as the aggressor and public enemy number one. Just a few days ago a pro-criminal news outlet  compiled a lead table of so-called unfriendly governments, a sort of a premier league of Russia's  biggest enemies, and who came top? Britain came top, and last week the Russian military newspaper  published an extraordinary article which claimed that since the end of the 18th century Britain has  been trying to deal Russia a crushing defeat. The aim of all of this I think is to fuel, to feed  an alternative reality, and convince Russians the Russian people that their country is the innocent  victim of Western aggression. Steve Rosenberg",
+      "suitable_for_training": false
+    }
+  ]
+}

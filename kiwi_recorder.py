@@ -105,6 +105,7 @@ class Config:
     PRESENTERS_FILE = str(HOME / "projects" / "shipping-forecast-recorder" / "presenters.json")
     LLM_VALIDATE_PRESENTER = True  # Use LLM to validate uncertain presenter names
     UNKNOWN_PRESENTER_LABEL = "Unknown Announcer"  # Fallback when presenter can't be determined
+    VOICEPRINT_DATABASE = "/mnt/user/shipping/voiceprints/database.json"  # Voiceprint database path on Rack
 
     # MQTT notification settings
     MQTT_BROKER = "192.168.4.64"
@@ -860,10 +861,13 @@ def process_recording(
             logger.info(f"  Cut at: {int(cut_time // 60)}:{int(cut_time % 60):02d}")
             logger.info(f"  Fade: {fade_duration}s")
 
-            # Convert to MP3
-            mp3_path = convert_to_mp3(processed_path, logger)
+            # Convert to MP3 with ID3 tags
+            metadata = build_id3_metadata(processed_path)
+            mp3_path = convert_to_mp3(processed_path, logger, metadata=metadata)
             if mp3_path:
                 logger.info(f"Converted to MP3: {mp3_path}")
+                logger.info(f"  ID3 Title: {metadata['title']}")
+                logger.info(f"  ID3 Artist: {metadata['artist']}")
 
             return processed_path
 
@@ -872,14 +876,110 @@ def process_recording(
         return None
 
 
-def convert_to_mp3(wav_path: str, logger: logging.Logger, bitrate: str = "64k") -> Optional[str]:
+def build_id3_metadata(wav_path: str) -> Dict[str, str]:
     """
-    Convert WAV file to MP3 using ffmpeg.
+    Build ID3 metadata tags from filename and sidecar file.
+
+    Args:
+        wav_path: Path to WAV file
+
+    Returns:
+        Dict with ID3 tag values for title, artist, album, date, comment, genre
+    """
+    basename = os.path.basename(wav_path)
+
+    # Parse filename for date/time/RSSI
+    # Format: ShippingFCST-YYMMDD_AM_HHMMSSUTC--host--avg-XX_processed.wav
+    date_match = re.search(r'ShippingFCST-(\d{2})(\d{2})(\d{2})_(\w+)_(\d{2})(\d{2})', basename)
+    rssi_match = re.search(r'avg-(\d+)', basename)
+
+    # Read sidecar for presenter info
+    txt_path = wav_path.replace('_processed.wav', '.txt').replace('.wav', '.txt')
+    presenter = None
+    if os.path.exists(txt_path):
+        try:
+            with open(txt_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+                # Look for "Presenter: Name" pattern
+                pres_match = re.search(r'^Presenter:\s*(.+)$', content, re.MULTILINE)
+                if pres_match:
+                    presenter = pres_match.group(1).strip()
+                    if presenter.lower() == "not detected":
+                        presenter = None
+                # Look for "Unknown presenter:" pattern
+                if not presenter:
+                    unknown_match = re.search(r'^Unknown presenter:\s*(.+)$', content, re.MULTILINE)
+                    if unknown_match:
+                        presenter = Config.UNKNOWN_PRESENTER_LABEL
+        except Exception:
+            pass
+
+    # Build clean title in format: ShippingForecast-20251219-0047-Richard-Evans-49dB
+    title_parts = []
+    title_parts.append("ShippingForecast")
+
+    if date_match:
+        yy, mm, dd, ampm, hh, min_sec = date_match.groups()
+        year = f"20{yy}"
+        title_parts.append(f"{year}{mm}{dd}")
+        title_parts.append(f"{hh}{min_sec[:2]}")  # HHMM only
+
+    if presenter:
+        # Convert "Richard Evans" to "Richard-Evans"
+        title_parts.append(presenter.replace(' ', '-'))
+
+    if rssi_match:
+        title_parts.append(f"{rssi_match.group(1)}dB")
+
+    title = "-".join(title_parts)
+
+    # Extract date for ID3 date field
+    date_str = None
+    if date_match:
+        yy, mm, dd = date_match.groups()[:3]
+        date_str = f"20{yy}-{mm}-{dd}"
+
+    # Build comment with recording details
+    comment_parts = []
+    host_match = re.search(r'--([^-]+)--', basename)
+    if host_match:
+        host = host_match.group(1)
+        if host != "legacy":
+            comment_parts.append(f"Recorded from {host}")
+    comment_parts.append("198 kHz longwave via KiwiSDR network")
+    if rssi_match:
+        comment_parts.append(f"Signal: -{rssi_match.group(1)} dBFS")
+
+    return {
+        "title": title,
+        "artist": presenter or "Unknown Announcer",
+        "album": "BBC Shipping Forecast",
+        "date": date_str or "",
+        "comment": " | ".join(comment_parts),
+        "genre": "Speech"
+    }
+
+
+def convert_to_mp3(
+    wav_path: str,
+    logger: logging.Logger,
+    bitrate: str = "64k",
+    metadata: Optional[Dict[str, str]] = None
+) -> Optional[str]:
+    """
+    Convert WAV file to MP3 using ffmpeg with ID3 tags.
 
     Args:
         wav_path: Path to WAV file
         logger: Logger instance
         bitrate: MP3 bitrate (default: 64k for speech)
+        metadata: Optional dict with ID3 tag values:
+                  - title: Track title
+                  - artist: Presenter name
+                  - album: Album name
+                  - date: Recording date (YYYY-MM-DD)
+                  - comment: Additional info
+                  - genre: Genre (default: Speech)
 
     Returns:
         Path to MP3 file, or None if conversion failed
@@ -892,8 +992,24 @@ def convert_to_mp3(wav_path: str, logger: logging.Logger, bitrate: str = "64k") 
             '-codec:a', 'libmp3lame',
             '-b:a', bitrate,
             '-y',  # Overwrite output file
-            mp3_path
         ]
+
+        # Add ID3 metadata tags if provided
+        if metadata:
+            if metadata.get('title'):
+                cmd.extend(['-metadata', f'title={metadata["title"]}'])
+            if metadata.get('artist'):
+                cmd.extend(['-metadata', f'artist={metadata["artist"]}'])
+            if metadata.get('album'):
+                cmd.extend(['-metadata', f'album={metadata["album"]}'])
+            if metadata.get('date'):
+                cmd.extend(['-metadata', f'date={metadata["date"]}'])
+            if metadata.get('comment'):
+                cmd.extend(['-metadata', f'comment={metadata["comment"]}'])
+            if metadata.get('genre'):
+                cmd.extend(['-metadata', f'genre={metadata["genre"]}'])
+
+        cmd.append(mp3_path)
 
         # Run conversion with suppressed output
         result = subprocess.run(
@@ -1106,6 +1222,7 @@ def mqtt_publish(payload: dict, logger: logging.Logger) -> bool:
                 "-h", Config.MQTT_BROKER,
                 "-p", str(Config.MQTT_PORT),
                 "-t", Config.MQTT_TOPIC,
+                "-r",  # Retain flag - broker stores last message
                 "-m", message,
             ],
             capture_output=True,
@@ -1528,6 +1645,34 @@ def cmd_scan(args, logger: logging.Logger) -> int:
     logger.info("")
     logger.info(f"Results saved: {scan_path}")
     logger.info("=" * 80)
+
+    # Alert if unusually low receiver availability (network issues)
+    MIN_EXPECTED_RECEIVERS = 5
+    if len(kept_rows) < MIN_EXPECTED_RECEIVERS:
+        logger.warning(f"⚠ Low receiver availability: only {len(kept_rows)} receivers passed (expected {MIN_EXPECTED_RECEIVERS}+)")
+        logger.warning(f"  This may indicate network issues or KiwiSDR proxy problems")
+
+        # Send MQTT alert
+        mqtt_payload = {
+            "event": "scan_low_availability",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "receivers_found": len(kept_rows),
+            "expected_minimum": MIN_EXPECTED_RECEIVERS,
+            "tested": len(to_scan),
+            "timeouts": len([s for s in skipped_rows if s.get("reason") == "timeout"]),
+            "weak_signals": len([s for s in skipped_rows if "weak" in s.get("reason", "")]),
+            "alert_level": "warning",
+            "message": f"Only {len(kept_rows)} receivers available (expected {MIN_EXPECTED_RECEIVERS}+). Check network connectivity."
+        }
+
+        if deep:
+            mqtt_payload["best_receiver"] = {
+                "host": deep[0]["host"],
+                "port": deep[0]["port"],
+                "rssi": deep[0]["avg"]
+            }
+
+        mqtt_publish(mqtt_payload, logger)
 
     return 0
 
@@ -2063,7 +2208,69 @@ def make_description(name: str, mtime: float, metadata: Dict[str, Any]) -> str:
     """Build description/summary for feed item"""
     side = read_sidecar_text(name)
     if side:
-        return side.strip()
+        # Parse sidecar and format nicely for podcast apps
+        lines = []
+
+        # Extract key information from sidecar
+        presenter_match = re.search(r"^Presenter:\s*(.+)$", side, re.MULTILINE)
+        confidence_match = re.search(r"^Confidence:\s*(.+)$", side, re.MULTILINE)
+        match_type_match = re.search(r"^Match type:\s*(.+)$", side, re.MULTILINE)
+        host_match = re.search(r"^Host\s*:\s*(.+)$", side, re.MULTILINE)
+        rssi_match = re.search(r"^RSSI\s*:\s*(.+)$", side, re.MULTILINE)
+        utc_match = re.search(r"^UTC\s*:\s*(.+)$", side, re.MULTILINE)
+
+        # Extract synopsis and gale warnings from Met Office section
+        synopsis_match = re.search(r"<h2>The general synopsis at \d+</h2>\s*<p>(.+?)</p>", side)
+        gale_warning_match = re.search(r'<p class="warning">\s*There are.*?in\s+(.+?)\s*</p>', side, re.DOTALL)
+
+        # Build formatted description
+        if utc_match:
+            date_str = utc_match.group(1).strip()
+            lines.append(f"BBC Shipping Forecast")
+            lines.append(f"Broadcast: {date_str}")
+
+        if presenter_match:
+            presenter = presenter_match.group(1).strip()
+            lines.append(f"Presented by: {presenter}")
+
+            # Add detection confidence if available
+            if confidence_match and match_type_match:
+                conf = confidence_match.group(1).strip()
+                match_type = match_type_match.group(1).strip()
+                if float(conf) < 1.0 or match_type != "exact":
+                    lines.append(f"(Presenter detected via {match_type}, confidence: {conf})")
+
+        lines.append("")  # Blank line
+
+        # Add Met Office synopsis if available
+        if synopsis_match:
+            synopsis = synopsis_match.group(1).strip()
+            lines.append(f"SYNOPSIS: {synopsis}")
+            lines.append("")
+
+        # Add gale warnings if present (clean up the area list)
+        if gale_warning_match:
+            areas = gale_warning_match.group(1).strip()
+            # Clean up HTML entities and whitespace
+            areas = re.sub(r'\s+', ' ', areas)
+            areas = areas.replace(' and ', ', ')
+            lines.append(f"Gale warnings: {areas}")
+            lines.append("")
+
+        # Add recording details
+        lines.append("RECORDING DETAILS")
+        if host_match:
+            host = host_match.group(1).strip()
+            lines.append(f"Receiver: {host}")
+        if rssi_match:
+            rssi = rssi_match.group(1).strip()
+            lines.append(f"Signal strength: {rssi}")
+        lines.append(f"Frequency: {Config.FREQ_KHZ} kHz longwave")
+        lines.append("")
+        lines.append("Received via KiwiSDR network (kiwisdr.com)")
+        lines.append("Please credit the receiver operator where possible.")
+
+        return "\n".join(lines).strip()
 
     # Fallback: synthesize from metadata
     ampm_str = parse_ampm_time_str(name) or ""
@@ -2071,14 +2278,15 @@ def make_description(name: str, mtime: float, metadata: Dict[str, Any]) -> str:
     avg = metadata.get("avg_int", "??")
 
     lines = [
-        f"Shipping Forecast – {ampm_str}".strip(),
-        f"Receiver host: {host}",
-        f"Freq: {Config.FREQ_KHZ} kHz, Mode: {Config.MODE}",
-        f"Average RSSI (label): -{avg} dBFS",
+        f"BBC Shipping Forecast – {ampm_str}",
         "",
-        "CREDIT / ORIGIN:",
-        "  Received via KiwiSDR network (https://kiwisdr.com)",
-        "  Please credit the receiver operator where possible.",
+        "RECORDING DETAILS",
+        f"Receiver: {host}",
+        f"Frequency: {Config.FREQ_KHZ} kHz longwave",
+        f"Signal strength: -{avg} dBFS",
+        "",
+        "Received via KiwiSDR network (kiwisdr.com)",
+        "Please credit the receiver operator where possible.",
     ]
     return "\n".join(lines)
 
