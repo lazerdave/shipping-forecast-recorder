@@ -696,10 +696,13 @@ def detect_anthem_start(wav_path: str, logger: logging.Logger) -> Optional[Tuple
             rec_rate = wav.getframerate()
             recording = np.frombuffer(frames, dtype=np.int16).astype(np.float32)
 
-        # Verify sample rates match
+        # Resample template if sample rates don't match
         if template_rate != rec_rate:
-            logger.warning(f"Sample rate mismatch! Template: {template_rate}, Recording: {rec_rate}")
-            return None
+            logger.info(f"Sample rate mismatch - resampling template from {template_rate} to {rec_rate} Hz")
+            # Calculate number of samples needed for target rate
+            num_samples = int(len(template) * rec_rate / template_rate)
+            template = signal.resample(template, num_samples)
+            template_rate = rec_rate
 
         # Start search from 10 minutes
         start_search_time = 10 * 60
