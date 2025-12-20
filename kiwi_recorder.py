@@ -65,6 +65,8 @@ class Config:
     FREQ_KHZ = "198"
     MODE = "am"
     DURATION_SEC = 15 * 60  # 15 minutes (captures full forecast + anthem + handoff)
+    PARALLEL_RECORDINGS = 2  # Number of simultaneous recordings (redundancy for reliability)
+    MIN_VALID_SIZE_MB = 13  # Minimum file size in MB for valid recording (60% of expected 21 MB)
 
     # Scanning settings
     PROBE_SEC = 8
@@ -1716,6 +1718,49 @@ def pick_site_from_scan(
     return (Config.FALLBACK_HOST, Config.FALLBACK_PORT, None, "empty-scan")
 
 
+def pick_top_n_sites_from_scan(
+    ptr_path: str,
+    n: int,
+    logger: logging.Logger
+) -> List[Tuple[str, int, Optional[float]]]:
+    """
+    Pick top N recording sites from scan results
+
+    Returns: List of (host, port, scan_avg) tuples, up to N items
+    """
+    if not os.path.exists(ptr_path):
+        logger.warning(f"No scan file at {ptr_path}, returning fallback only")
+        return [(Config.FALLBACK_HOST, Config.FALLBACK_PORT, None)]
+
+    try:
+        with open(ptr_path) as f:
+            data = json.load(f)
+    except Exception as e:
+        logger.error(f"Failed to read scan file: {e}")
+        return [(Config.FALLBACK_HOST, Config.FALLBACK_PORT, None)]
+
+    top = data.get("top20") or []
+    kept = data.get("kept_initial") or []
+
+    results = []
+
+    # Get from top20 first
+    for r in top[:n]:
+        results.append((r["host"], int(r["port"]), r.get("avg")))
+
+    # If we need more, get from kept_initial
+    if len(results) < n and kept:
+        kept.sort(key=lambda r: r["avg"], reverse=True)
+        for r in kept[:n - len(results)]:
+            results.append((r["host"], int(r["port"]), r.get("avg")))
+
+    # If still empty, use fallback
+    if not results:
+        results.append((Config.FALLBACK_HOST, Config.FALLBACK_PORT, None))
+
+    return results
+
+
 def make_base_name(
     utc_date: str,
     ampm: str,
@@ -1869,6 +1914,133 @@ def record_audio(
     return out_base_no_ext + ".wav"
 
 
+def record_audio_parallel(
+    receivers: List[Tuple[str, int, Optional[float]]],
+    out_base_no_ext: str,
+    logger: logging.Logger
+) -> Tuple[Optional[str], str, int, float]:
+    """
+    Record from multiple receivers in parallel and select the best result
+
+    Args:
+        receivers: List of (host, port, scan_avg) tuples
+        out_base_no_ext: Base filename without extension
+        logger: Logger instance
+
+    Returns:
+        Tuple of (best_wav_path, best_host, best_port, best_rssi)
+        Returns (None, fallback_host, fallback_port, -999) if all recordings fail
+    """
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    logger.info(f"[parallel] Recording from {len(receivers)} receivers simultaneously")
+
+    # Create temporary filenames for each receiver
+    recording_tasks = []
+    for i, (host, port, scan_avg) in enumerate(receivers):
+        temp_base = f"{out_base_no_ext}_r{i}"
+        recording_tasks.append({
+            "index": i,
+            "host": host,
+            "port": port,
+            "scan_avg": scan_avg,
+            "temp_base": temp_base,
+            "wav_path": None,
+            "error": None,
+            "file_size_mb": 0,
+            "fresh_rssi": None
+        })
+
+    # Launch parallel recordings
+    def record_one(task):
+        """Record from one receiver"""
+        try:
+            # Get fresh RSSI before recording
+            fresh_vals, err = probe_smeter(task["host"], task["port"], Config.RSSI_REFRESH_SEC, logger)
+            task["fresh_rssi"] = statistics.mean(fresh_vals) if fresh_vals else task["scan_avg"]
+
+            logger.info(f"[parallel r{task['index']}] Recording from {task['host']}:{task['port']} (RSSI: {task['fresh_rssi']} dBFS)")
+
+            # Record audio
+            wav_path = record_audio(task["host"], task["port"], task["temp_base"], logger)
+            task["wav_path"] = wav_path
+
+            # Check file size
+            if os.path.exists(wav_path):
+                task["file_size_mb"] = os.path.getsize(wav_path) / (1024 * 1024)
+                logger.info(f"[parallel r{task['index']}] Completed: {task['file_size_mb']:.1f} MB")
+            else:
+                task["error"] = "File not created"
+                logger.error(f"[parallel r{task['index']}] Failed: File not created")
+
+        except Exception as e:
+            task["error"] = str(e)
+            logger.error(f"[parallel r{task['index']}] Failed: {e}")
+
+        return task
+
+    # Execute recordings in parallel
+    with ThreadPoolExecutor(max_workers=len(receivers)) as executor:
+        futures = {executor.submit(record_one, task): task for task in recording_tasks}
+
+        for future in as_completed(futures):
+            try:
+                future.result()  # Collect result (already stored in task dict)
+            except Exception as e:
+                logger.error(f"[parallel] Unexpected error: {e}")
+
+    # Evaluate recordings and pick the best
+    valid_recordings = [
+        task for task in recording_tasks
+        if task["wav_path"] and not task["error"] and task["file_size_mb"] >= Config.MIN_VALID_SIZE_MB
+    ]
+
+    if not valid_recordings:
+        logger.error("[parallel] All recordings failed or incomplete!")
+        logger.error(f"[parallel] Results: {[(t['host'], t['file_size_mb'], t['error']) for t in recording_tasks]}")
+
+        # Clean up failed recordings
+        for task in recording_tasks:
+            if task["wav_path"] and os.path.exists(task["wav_path"]):
+                try:
+                    os.remove(task["wav_path"])
+                    logger.info(f"[parallel] Deleted failed recording: {task['wav_path']}")
+                except Exception as e:
+                    logger.warning(f"[parallel] Could not delete {task['wav_path']}: {e}")
+
+        return (None, Config.FALLBACK_HOST, Config.FALLBACK_PORT, -999.0)
+
+    # Sort by file size (larger is better), then by RSSI (higher is better)
+    valid_recordings.sort(
+        key=lambda t: (t["file_size_mb"], t["fresh_rssi"] or -999),
+        reverse=True
+    )
+
+    best = valid_recordings[0]
+    logger.info(f"[parallel] Best recording: r{best['index']} ({best['host']}:{best['port']}) - {best['file_size_mb']:.1f} MB, {best['fresh_rssi']} dBFS")
+
+    # Rename best recording to final filename
+    final_wav_path = f"{out_base_no_ext}.wav"
+    try:
+        shutil.move(best["wav_path"], final_wav_path)
+        logger.info(f"[parallel] Promoted to: {final_wav_path}")
+    except Exception as e:
+        logger.error(f"[parallel] Failed to rename best recording: {e}")
+        # If rename fails, just use the temp filename
+        final_wav_path = best["wav_path"]
+
+    # Delete unsuccessful recordings
+    for task in recording_tasks:
+        if task["index"] != best["index"] and task["wav_path"] and os.path.exists(task["wav_path"]):
+            try:
+                os.remove(task["wav_path"])
+                logger.info(f"[parallel] Deleted recording r{task['index']}: {task['file_size_mb']:.1f} MB from {task['host']}")
+            except Exception as e:
+                logger.warning(f"[parallel] Could not delete {task['wav_path']}: {e}")
+
+    return (final_wav_path, best["host"], best["port"], best["fresh_rssi"] or best["scan_avg"] or -999.0)
+
+
 def update_latest_symlink(wav_path: str, logger: logging.Logger) -> None:
     """Update latest.wav symlink to point to newest recording"""
     latest = os.path.join(Config.OUT_DIR, "latest.wav")
@@ -1886,12 +2058,12 @@ def cmd_record(args, logger: logging.Logger) -> int:
     logger.info(f"[start] Record @ {time.strftime('%Y-%m-%d %H:%M:%S %Z')}")
 
     utc_d, ampm, utc_t = now_parts_with_ampm()
-    host, port, scan_avg, why = pick_site_from_scan(Config.SCAN_POINTER, logger)
 
-    if why:
-        logger.info(f"Scan note: {why}")
-
-    logger.info(f"Chosen site: {host}:{port} (scan avg: {scan_avg})")
+    # Get top N receivers for parallel recording
+    receivers = pick_top_n_sites_from_scan(Config.SCAN_POINTER, Config.PARALLEL_RECORDINGS, logger)
+    logger.info(f"Selected {len(receivers)} receivers for parallel recording:")
+    for i, (h, p, avg) in enumerate(receivers):
+        logger.info(f"  [{i}] {h}:{p} (scan avg: {avg})")
 
     # Fetch shipping forecast (don't block recording if it fails)
     forecast_html = fetch_shipping_forecast(logger)
@@ -1900,33 +2072,52 @@ def cmd_record(args, logger: logging.Logger) -> int:
     else:
         logger.warning("Recording will proceed without shipping forecast")
 
-    # Get fresh RSSI reading
-    fresh_vals, err = probe_smeter(host, port, Config.RSSI_REFRESH_SEC, logger)
-    fresh = statistics.mean(fresh_vals) if fresh_vals else None
-
-    rssi_for_label = fresh if fresh is not None else (
-        scan_avg if scan_avg is not None else -999.0
-    )
-
-    logger.info(f"Fresh RSSI: {fresh} dBFS  |  Using in label: {rssi_for_label} dBFS")
-
-    # Generate filename
-    host_short = hostname_short(host)
-    base_name = make_base_name(utc_d, ampm, utc_t, host_short, rssi_for_label)
+    # Generate base filename (will be updated with actual receiver after parallel recording)
+    # Use temporary generic filename for now
+    base_name = f"ShippingFCST-{utc_d}_{ampm}_{utc_t}UTC--parallel--avg-0"
     out_base = os.path.join(Config.OUT_DIR, base_name)
 
-    # Record
+    # Record from multiple receivers in parallel
     try:
-        wav_path = record_audio(host, port, out_base, logger)
+        wav_path, host, port, rssi_for_label = record_audio_parallel(receivers, out_base, logger)
+
+        if not wav_path:
+            # All recordings failed
+            logger.error("All parallel recordings failed!")
+            notify_recording_status(
+                success=False,
+                receiver="all-receivers",
+                rssi=-999.0,
+                error="All parallel recordings failed or incomplete",
+                logger=logger,
+            )
+            return 1
+
+        # Rename to final filename with actual receiver info
+        host_short = hostname_short(host)
+        final_base_name = make_base_name(utc_d, ampm, utc_t, host_short, rssi_for_label)
+        final_wav_path = os.path.join(Config.OUT_DIR, final_base_name + ".wav")
+
+        # Rename the selected recording to final filename
+        if wav_path != final_wav_path:
+            try:
+                shutil.move(wav_path, final_wav_path)
+                wav_path = final_wav_path
+                logger.info(f"Renamed to: {final_wav_path}")
+            except Exception as e:
+                logger.warning(f"Could not rename to final filename: {e}")
+
+        # Write sidecar and update symlink
         write_sidecar(wav_path, host, port, rssi_for_label, ampm, logger, forecast_html)
         update_latest_symlink(wav_path, logger)
         logger.info(f"Saved: {wav_path}")
+
     except Exception as e:
-        logger.error(f"Recording failed: {e}")
+        logger.error(f"Parallel recording failed: {e}")
         notify_recording_status(
             success=False,
-            receiver=f"{host}:{port}",
-            rssi=rssi_for_label,
+            receiver="parallel-error",
+            rssi=-999.0,
             error=str(e),
             logger=logger,
         )

@@ -8,6 +8,54 @@ Shipping Forecast Recorder - Specialized automated recorder for BBC Shipping For
 
 ## Recent Changes
 
+### 2025-12-20: Parallel Recording System
+
+**Context:**
+- BBC Radio 4 longwave (198 kHz) shutdown confirmed for **September 26, 2026**
+- These recordings are the LAST EVER Shipping Forecast broadcasts on longwave
+- Two failed recordings in one week (Dec 18, Dec 20) due to receiver overload - unacceptable for historical archival
+
+**What Changed:**
+- Implemented parallel recording from top N receivers (default: 2)
+- System now records simultaneously from multiple KiwiSDR receivers
+- Automatically selects best recording based on completeness and quality
+- Deletes unsuccessful recordings, promotes best to final filename
+
+**How It Works:**
+1. Selects top N receivers from scan results (sorted by RSSI)
+2. Launches N concurrent recordings with temporary filenames
+3. After broadcast completes, evaluates all recordings:
+   - Minimum valid size: 13 MB (60% of expected 21 MB WAV)
+   - Preference: largest file = most complete broadcast
+   - Tie-breaker: best RSSI
+4. Renames best recording to final filename
+5. Deletes unsuccessful recordings
+6. Proceeds with normal post-processing (anthem detection, MP3 conversion, etc.)
+
+**New Configuration:**
+```python
+Config.PARALLEL_RECORDINGS = 2  # Number of simultaneous recordings (default: 2)
+Config.MIN_VALID_SIZE_MB = 13   # Minimum file size for valid recording (60% of 21 MB)
+```
+
+**New Functions:**
+- `pick_top_n_sites_from_scan(n)` - Returns top N receivers from scan results
+- `record_audio_parallel(receivers, out_base, logger)` - Orchestrates parallel recordings
+
+**Impact:**
+- **Maximum reliability**: If one receiver fails/overloads, others continue
+- **Zero user impact**: Feed generation, archiving, all downstream processes unchanged
+- **Efficient**: Only uses N receiver slots during the 13-minute broadcast window
+- **Self-healing**: Automatically adapts to receiver availability
+
+**Testing:**
+- Run manual test: `python3 /home/pi/kiwi_recorder.py record`
+- Monitor logs: `tail -f /home/pi/Shipping_Forecast_SDR_Recordings.log`
+- Check for `[parallel]` log entries showing multi-receiver coordination
+
+**Why This Matters:**
+These are irreplaceable historical artifacts. After September 2026, these recordings will be the only airchecks of BBC Radio 4 Shipping Forecast on longwave. Missing broadcasts is not acceptable.
+
 ### 2025-12-17: MQTT Retain Flag
 
 Added `-r` (retain) flag to all MQTT publishes. The broker now stores the latest message on `shipping-forecast/status`, so new subscribers receive current status immediately on connect.
