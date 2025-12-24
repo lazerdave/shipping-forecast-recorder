@@ -8,6 +8,45 @@ Shipping Forecast Recorder - Specialized automated recorder for BBC Shipping For
 
 ## Recent Changes
 
+### 2025-12-23: Automatic Presenter Database Updates
+
+**What Changed:**
+- System now automatically adds new BBC Radio 4 announcers to the database
+- Two-phase LLM validation: first checks known presenters, then validates new ones
+- Auto-generates name variations (possessives, first name only, transcription errors)
+- Commits changes to git with descriptive message
+- Sends MQTT alert for user verification
+
+**How It Works:**
+1. When presenter detection finds an unknown name (e.g., "Giauevietska")
+2. LLM first checks if it matches any known presenter with transcription error
+3. If not found, LLM validates if it's a real BBC R4 announcer
+4. If confirmed, system:
+   - Extracts canonical name (e.g., "Danielle Jalowiecka")
+   - Generates variations: ["Danielle Jalowiecka", "Danielle", "Danielle's", "Giauevietska"]
+   - Adds to presenters.json with updated timestamp
+   - Commits to git: "Auto-add presenter: Danielle Jalowiecka"
+   - Sends MQTT with `needs_review: true` for verification
+5. Future recordings with this presenter are automatically identified
+
+**New Functions:**
+- `auto_add_presenter_to_database()` - Adds presenter with variations and commits (kiwi_recorder.py:235)
+- Enhanced `validate_presenter_with_llm()` - Two-phase validation (kiwi_recorder.py:435)
+
+**Configuration:**
+Requires `Config.LLM_VALIDATE_PRESENTER = True` and ANTHROPIC_API_KEY
+
+**MQTT Notification:**
+- Event type: `presenter`
+- Match type: `auto_added`
+- Fields: `needs_review: true`, `review_reason: "Auto-added new presenter: [Name]"`
+
+**Benefits:**
+- Self-maintaining database - no manual updates needed
+- Captures new BBC R4 announcers as they appear
+- Historical accuracy for presenter attribution
+- User retains oversight via MQTT alerts
+
 ### 2025-12-20: Parallel Recording System
 
 **Context:**
