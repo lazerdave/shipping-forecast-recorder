@@ -8,6 +8,65 @@ Shipping Forecast Recorder - Specialized automated recorder for BBC Shipping For
 
 ## Recent Changes
 
+### 2025-12-26: NordVPN Split Tunnel for IP Separation
+
+**Context:**
+- Both zigbee and Rack recorders share the same public IP (97.118.12.61)
+- Running parallel recorders from same IP could cause KiwiSDR rate limiting
+- Solution: Route zigbee's recorder through NordVPN for a different public IP
+
+**What Changed:**
+- Implemented network namespace with WireGuard to route recorder traffic through NordVPN UK
+- Main system keeps Tailscale and local network access intact
+- Recorder now exits via NordVPN IP (194.88.100.x)
+
+**Architecture:**
+```
+┌─────────────────────────────────────────────────────────┐
+│                    zigbee (main)                        │
+│  wlan0 (192.168.4.84) ──► Local network, Internet      │
+│  tailscale0 (100.110.190.105) ──► Tailscale Funnel     │
+│                                                         │
+│  ┌─────────────────────────────────────────────────┐   │
+│  │           vpn-ns (network namespace)            │   │
+│  │  wg-nord ──► NordVPN UK (different public IP)   │   │
+│  │  [kiwi_recorder.py runs here via vpn-exec]      │   │
+│  └─────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────┘
+```
+
+**New Components:**
+- `/etc/wireguard/wg-nord.conf` - WireGuard config for NordVPN UK
+- `/usr/local/bin/vpn-ns-setup.sh` - Creates isolated network namespace with VPN
+- `/usr/local/bin/vpn-exec` - Wrapper to run commands inside VPN namespace
+- `/etc/systemd/system/vpn-namespace.service` - Keeps namespace alive across reboots
+
+**Key Details:**
+- VPN traffic: KiwiSDR, Met Office, Internet Archive
+- Local traffic (via veth bridge): MQTT to Rack (192.168.4.64), SSH for Whisper transcription
+- Server: NordVPN UK (uk888.nordvpn.com / 185.16.205.3)
+
+**Testing:**
+```bash
+# Compare IPs
+curl -s ifconfig.me                                    # Main: 97.118.12.61
+sudo ip netns exec vpn-ns curl -s ifconfig.me          # VPN: 194.88.100.x
+
+# Test recorder via VPN
+sudo /usr/local/bin/vpn-exec python3 /home/pi/kiwi_recorder.py scan
+
+# Check namespace status
+sudo ip netns exec vpn-ns ip addr
+sudo systemctl status vpn-namespace
+```
+
+**Rollback:**
+```bash
+crontab /home/pi/projects/shipping-forecast-recorder/crontab.backup.original
+sudo systemctl stop vpn-namespace
+sudo systemctl disable vpn-namespace
+```
+
 ### 2025-12-23: Automatic Presenter Database Updates
 
 **What Changed:**
