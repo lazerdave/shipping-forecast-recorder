@@ -8,6 +8,54 @@ Shipping Forecast Recorder - Specialized automated recorder for BBC Shipping For
 
 ## Recent Changes
 
+### 2026-01-03: Rack Promoted to Primary Recorder
+
+**Context:**
+- zigbee's crontab setup command was overwriting vpn-exec wrapper, causing recording failures
+- Rack Docker container is more reliable (always-on server, no SD card issues)
+- Decision to make Rack primary and zigbee backup
+
+**Architecture:**
+```
+┌─────────────────────────────────────────────────────────┐
+│                    Rack (PRIMARY)                        │
+│  Docker: shipping-forecast container                     │
+│  - Records via KiwiSDR                                   │
+│  - Uploads to Internet Archive                           │
+│  - Serves feed at shipping.lazerdave.blue (via Tunnel)  │
+│  - Local Whisper (faster-whisper, "small" model)        │
+│  - MQTT notifications                                    │
+└─────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────┐
+│                    zigbee (BACKUP)                       │
+│  - Records via KiwiSDR (through NordVPN for diff IP)    │
+│  - IA uploads DISABLED (Config.IA_UPLOAD_ENABLED=False) │
+│  - Still backs up to Rack NFS mount                     │
+│  - Presenter detection via SSH to Rack Whisper          │
+│  - MQTT notifications                                    │
+│  - Serves local feed at zigbee.minskin-manta.ts.net     │
+└─────────────────────────────────────────────────────────┘
+```
+
+**What Changed:**
+- Rack Docker: BASE_URL → `https://shipping.lazerdave.blue`
+- Rack Docker: ANTHROPIC_API_KEY configured in .env
+- Rack Docker: WHISPER_MODEL → "small" for better accuracy
+- Rack Docker: Added to Cloudflare Tunnel for public access
+- zigbee: IA_UPLOAD_ENABLED → False (backup mode)
+- zigbee: WHISPER_MODEL → "small" for consistency
+- zigbee: cmd_setup now preserves vpn-exec wrapper (permanent fix)
+
+**Public Feed:**
+- URL: https://shipping.lazerdave.blue/feed.xml
+- Served by: Rack Docker → nginx → Cloudflare Tunnel
+
+**Fallback:**
+- If Rack fails, zigbee continues recording independently
+- zigbee's recordings available at zigbee.minskin-manta.ts.net/feed.xml
+- Can quickly re-enable IA uploads on zigbee if needed
+
 ### 2025-12-26: NordVPN Split Tunnel for IP Separation
 
 **Context:**
