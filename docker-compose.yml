@@ -1,0 +1,29 @@
+services:
+  shipping-forecast:
+    build: .
+    container_name: shipping-forecast
+    restart: unless-stopped
+    hostname: rack
+    volumes:
+      - ./recordings:/data/recordings
+      - ./scans:/data/scans
+      - ./logs:/data/logs
+      - /mnt/user/shipping:/mnt/user/shipping  # Archive directory
+    environment:
+      - TZ=UTC
+      - BASE_URL=https://shipping.lazerdave.blue
+      - FEED_AUTHOR=KiwiSDR capture on rack
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - OUT_DIR=/data/recordings
+      - SCAN_DIR=/data/scans
+      - LOG_FILE=/data/logs/shipping-forecast.log
+      - KIWI_REC_PATH=/app/kiwiclient/kiwirecorder.py
+      - PRESENTERS_FILE=/app/presenters.json
+    ports:
+      - "8090:8090"
+    network_mode: host  # Needed for localhost MQTT and SSH
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
