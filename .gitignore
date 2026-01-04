@@ -26,3 +26,12 @@ share/
 
 # Local settings
 .claude/settings.local.json
+
+# Docker runtime data
+recordings/
+scans/
+logs/
+
+# Secrets (never commit)
+.env
+ia.ini

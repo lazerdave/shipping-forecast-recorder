@@ -103,7 +103,7 @@ class Config:
     DETECT_PRESENTER = True  # Enable/disable presenter detection
     RACK_SSH_HOST = "root@192.168.4.64"  # SSH target for Whisper transcription
     RACK_TRANSCRIBE_SCRIPT = "/usr/local/bin/transcribe_audio.py"
-    WHISPER_MODEL = "base"  # Whisper model size (tiny, base, small, medium, large)
+    WHISPER_MODEL = "small"  # Whisper model size (tiny, base, small, medium, large)
     PRESENTERS_FILE = str(HOME / "projects" / "shipping-forecast-recorder" / "presenters.json")
     LLM_VALIDATE_PRESENTER = True  # Use LLM to validate uncertain presenter names
     UNKNOWN_PRESENTER_LABEL = "Unknown Announcer"  # Fallback when presenter can't be determined
@@ -445,17 +445,27 @@ def detect_presenter(
         ]
         subprocess.run(extract_cmd, capture_output=True, check=True)
 
-        # Copy to Rack
-        logger.info("[presenter] Sending to Rack for transcription...")
-        scp_cmd = ["scp", "-q", tmp_path, f"{Config.RACK_SSH_HOST}:/tmp/presenter_segment.wav"]
-        subprocess.run(scp_cmd, capture_output=True, check=True, timeout=30)
+        # Check for local Whisper availability (e.g., running in Docker on Rack)
+        local_whisper = os.environ.get('LOCAL_WHISPER') or os.path.exists('/app/transcribe_audio.py')
+        
+        if local_whisper:
+            # Run transcription locally
+            logger.info("[presenter] Running local Whisper transcription...")
+            local_script = '/app/transcribe_audio.py' if os.path.exists('/app/transcribe_audio.py') else Config.RACK_TRANSCRIBE_SCRIPT
+            transcribe_cmd = ["python3", local_script, tmp_path, Config.WHISPER_MODEL]
+            transcribe_output = subprocess.check_output(transcribe_cmd, text=True, timeout=120)
+        else:
+            # Copy to Rack and run remotely
+            logger.info("[presenter] Sending to Rack for transcription...")
+            scp_cmd = ["scp", "-q", tmp_path, f"{Config.RACK_SSH_HOST}:/tmp/presenter_segment.wav"]
+            subprocess.run(scp_cmd, capture_output=True, check=True, timeout=30)
 
-        # Run transcription on Rack
-        ssh_cmd = [
-            "ssh", Config.RACK_SSH_HOST,
-            f"python3 {Config.RACK_TRANSCRIBE_SCRIPT} /tmp/presenter_segment.wav {Config.WHISPER_MODEL}"
-        ]
-        transcribe_output = subprocess.check_output(ssh_cmd, text=True, timeout=120)
+            # Run transcription on Rack
+            ssh_cmd = [
+                "ssh", Config.RACK_SSH_HOST,
+                f"python3 {Config.RACK_TRANSCRIBE_SCRIPT} /tmp/presenter_segment.wav {Config.WHISPER_MODEL}"
+            ]
+            transcribe_output = subprocess.check_output(ssh_cmd, text=True, timeout=120)
 
         # Parse JSON response
         transcribe_result = json.loads(transcribe_output)
