@@ -28,10 +28,11 @@ RUN mkdir -p /root/share &&     ln -s /data/recordings /root/share/198k &&     l
 RUN mkdir -p /root/.config/internetarchive
 COPY ia.ini /root/.config/internetarchive/ia.ini
 
-# nginx configuration
-RUN rm /etc/nginx/sites-enabled/default
-COPY nginx.conf /etc/nginx/sites-available/shipping-forecast
-RUN ln -s /etc/nginx/sites-available/shipping-forecast /etc/nginx/sites-enabled/
+# nginx configuration - main config with Cloudflare log format
+COPY nginx.conf /etc/nginx/nginx.conf
+RUN rm -f /etc/nginx/sites-enabled/default
+COPY site.conf /etc/nginx/sites-available/shipping-forecast
+RUN ln -sf /etc/nginx/sites-available/shipping-forecast /etc/nginx/sites-enabled/
 
 # Copy entrypoint
 COPY entrypoint.sh /entrypoint.sh
@@ -39,7 +40,7 @@ RUN chmod +x /entrypoint.sh
 
 # Environment variables
 ENV PYTHONUNBUFFERED=1
-ENV BASE_URL=https://rack.minskin-manta.ts.net
+ENV BASE_URL=https://shipping.lazerdave.blue
 ENV TZ=UTC
 ENV LOCAL_WHISPER=1
 
