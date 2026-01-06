@@ -4,6 +4,33 @@ This log tracks recording failures, root causes, and fixes for the Shipping Fore
 
 ---
 
+## 2026-01-06: Public Feed Had Wrong URLs (Cron Env Vars)
+
+### Summary
+- **Public Feed:** Serving wrong URLs (`zigbee.minskin-manta.ts.net` instead of `shipping.lazerdave.blue`)
+- **Recordings:** Both systems recording correctly
+- **User Impact:** Podcast apps couldn't download episodes from public feed
+
+### What Happened
+The public feed at `https://shipping.lazerdave.blue/feed.xml` was serving episode URLs pointing to `zigbee.minskin-manta.ts.net` which isn't publicly accessible. Users couldn't play episodes.
+
+### Root Cause
+1. Docker container had `BASE_URL=https://shipping.lazerdave.blue` env var set correctly
+2. BUT cron doesn't inherit Docker environment variables
+3. When cron ran `kiwi_recorder.py feed`, the script used the default value (`zigbee.minskin-manta.ts.net`)
+4. Feed was generated with wrong URLs
+
+### Fix Applied
+1. Manually regenerated feed with `docker exec shipping-forecast python3 /app/kiwi_recorder.py feed`
+2. Added `BASE_URL=https://shipping.lazerdave.blue` to container's crontab
+
+### Caveat
+The `setup` command runs daily at 00:02 and rewrites the crontab. This may remove the BASE_URL line. Long-term fix needed in either:
+- kiwi_recorder.py's cmd_setup to preserve env var lines in crontab
+- entrypoint.sh to inject env vars into crontab at container start
+
+---
+
 ## 2026-01-05: Rack Primary Recording Failed (Threshold Too Strict)
 
 ### Summary
