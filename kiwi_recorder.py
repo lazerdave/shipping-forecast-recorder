@@ -66,7 +66,12 @@ class Config:
     MODE = "am"
     DURATION_SEC = 15 * 60  # 15 minutes (captures full forecast + anthem + handoff)
     PARALLEL_RECORDINGS = 2  # Number of simultaneous recordings (redundancy for reliability)
-    MIN_VALID_SIZE_MB = 13  # Minimum file size in MB for valid recording (60% of expected 21 MB)
+    MIN_VALID_SIZE_MB = 11  # Minimum file size in MB for valid recording (~50% of expected 21 MB)
+
+    # Excluded receivers (chronically unreliable)
+    EXCLUDED_HOSTS = [
+        "websdr.uk",  # Chronic "Too busy" errors during broadcast times
+    ]
 
     # Scanning settings
     PROBE_SEC = 8
@@ -97,10 +102,12 @@ class Config:
     RACK_BACKUP_PATH = "/mnt/rack-shipping"
 
     # Internet Archive settings
+    IA_UPLOAD_ENABLED = True  # Enable IA uploads (Rack is primary uploader)
     IA_UPLOAD_TIMEOUT = 300  # 5 minutes for ~5.5 MB file
 
     # Presenter detection settings
     DETECT_PRESENTER = True  # Enable/disable presenter detection
+    LOCAL_WHISPER = os.environ.get("LOCAL_WHISPER", "").lower() in ("1", "true", "yes")  # Use local Whisper instead of SSH
     RACK_SSH_HOST = "root@192.168.4.64"  # SSH target for Whisper transcription
     RACK_TRANSCRIBE_SCRIPT = "/usr/local/bin/transcribe_audio.py"
     WHISPER_MODEL = "small"  # Whisper model size (tiny, base, small, medium, large)
@@ -113,6 +120,10 @@ class Config:
     MQTT_BROKER = "192.168.4.64"
     MQTT_PORT = 1883
     MQTT_TOPIC = "shipping-forecast/status"
+
+    # VPN namespace settings (for IP separation from other recorders)
+    # Set to path of vpn-exec wrapper, or None to disable
+    VPN_EXEC_PATH = "/usr/local/bin/vpn-exec" if os.path.exists("/usr/local/bin/vpn-exec") else None
 
     # Fallback receiver
     FALLBACK_HOST = "norfolk.george-smart.co.uk"
@@ -177,6 +188,7 @@ PRESENTER_NAME_PATTERNS = [
     re.compile(r"\b(?:I'm|I am)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)", re.IGNORECASE),
     re.compile(r"\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s+(?:for|on|from)\s+(?:BBC|Radio)", re.IGNORECASE),
     re.compile(r"\bwith\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s*[.,]", re.IGNORECASE),
+    re.compile(r"\b(?:from me|from)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s+(?:and|here)", re.IGNORECASE),
 ]
 
 PRESENTER_FALSE_POSITIVES = {
@@ -232,7 +244,120 @@ def load_presenters() -> List[Dict[str, Any]]:
     return []
 
 
+def auto_add_presenter_to_database(
+    name: str,
+    transcribed_variation: str,
+    logger: logging.Logger
+) -> bool:
+    """
+    Automatically add a newly discovered presenter to the database.
+
+    Args:
+        name: Canonical presenter name (e.g., "Danielle Jalowiecka")
+        transcribed_variation: How it appeared in transcription (e.g., "Giauevietska")
+        logger: Logger instance
+
+    Returns:
+        True if successfully added, False otherwise
+    """
+    try:
+        # Load current database
+        if not os.path.exists(Config.PRESENTERS_FILE):
+            logger.error(f"[presenter] Database file not found: {Config.PRESENTERS_FILE}")
+            return False
+
+        with open(Config.PRESENTERS_FILE, 'r') as f:
+            data = json.load(f)
+
+        presenters = data.get("presenters", [])
+
+        # Check if already exists (shouldn't happen, but safety check)
+        for p in presenters:
+            if p["name"].lower() == name.lower():
+                logger.info(f"[presenter] {name} already in database")
+                return False
+
+        # Generate variations
+        variations = [name]  # Canonical name
+
+        # Add first name if multi-part name
+        name_parts = name.split()
+        if len(name_parts) >= 2:
+            variations.append(name_parts[0])  # First name only
+
+        # Add possessive forms
+        variations.append(f"{name}'s")
+        if len(name_parts) >= 2:
+            variations.append(f"{name_parts[0]}'s")
+
+        # Add the transcribed variation if different
+        if transcribed_variation and transcribed_variation.lower() not in [v.lower() for v in variations]:
+            variations.append(transcribed_variation)
+
+        # Add new presenter
+        new_presenter = {
+            "name": name,
+            "variations": variations
+        }
+        presenters.append(new_presenter)
+
+        # Update metadata
+        from datetime import datetime
+        data["presenters"] = presenters
+        data["_last_updated"] = datetime.utcnow().strftime("%Y-%m-%d")
+
+        # Write back to file
+        with open(Config.PRESENTERS_FILE, 'w') as f:
+            json.dump(data, f, indent=2)
+
+        logger.info(f"[presenter] Added new presenter to database: {name} (variations: {variations})")
+
+        # Git commit
+        try:
+            import subprocess
+            repo_dir = os.path.dirname(os.path.abspath(Config.PRESENTERS_FILE))
+            commit_msg = f"Auto-add presenter: {name}\n\nDetected in recording, validated by LLM.\nVariations: {', '.join(variations)}\n\n🤖 Auto-added by presenter detection system"
+
+            subprocess.run(
+                ["git", "-C", repo_dir, "add", os.path.basename(Config.PRESENTERS_FILE)],
+                capture_output=True,
+                check=True,
+                timeout=10
+            )
+            subprocess.run(
+                ["git", "-C", repo_dir, "commit", "-m", commit_msg],
+                capture_output=True,
+                check=True,
+                timeout=10
+            )
+            logger.info(f"[presenter] Committed database update to git")
+        except subprocess.CalledProcessError as e:
+            logger.warning(f"[presenter] Git commit failed (non-fatal): {e}")
+        except Exception as e:
+            logger.warning(f"[presenter] Git commit error (non-fatal): {e}")
+
+        # Send MQTT notification
+        try:
+            presenter_result = {
+                "presenter": name,
+                "raw_match": transcribed_variation,
+                "confidence": 0.9,
+                "match_type": "auto_added"
+            }
+            notify_presenter_status(presenter_result, logger)
+        except Exception as e:
+            logger.warning(f"[presenter] MQTT notification failed (non-fatal): {e}")
+
+        return True
+
+    except Exception as e:
+        logger.error(f"[presenter] Failed to auto-add presenter: {e}")
+        return False
+
+
 def extract_name_candidates(transcript: str) -> List[str]:
+    # Normalize whitespace (Whisper sometimes adds extra spaces from line breaks)
+    transcript = " ".join(transcript.split())
     """Extract potential presenter names from transcript using regex patterns."""
     candidates = []
     for pattern in PRESENTER_NAME_PATTERNS:
@@ -328,6 +453,7 @@ def validate_presenter_with_llm(
 ) -> Optional[str]:
     """
     Use LLM to validate/correct an uncertain presenter name.
+    If a new valid BBC R4 announcer is detected, auto-add to database.
 
     Args:
         extracted_name: The name extracted from transcript
@@ -342,21 +468,24 @@ def validate_presenter_with_llm(
         return None
 
     try:
-        import anthropic
+        import openai
     except ImportError:
-        logger.debug("[presenter] anthropic package not installed, skipping LLM validation")
+        logger.debug("[presenter] openai package not installed, skipping LLM validation")
         return None
 
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    api_key = os.environ.get("OPENAI_API_KEY")
     if not api_key:
-        logger.debug("[presenter] No ANTHROPIC_API_KEY set, skipping LLM validation")
+        logger.debug("[presenter] No OPENAI_API_KEY set, skipping LLM validation")
         return None
 
     try:
+        client = openai.OpenAI(api_key=api_key)
+
         # Build list of known presenter names for the prompt
         known_names = [p["name"] for p in known_presenters]
 
-        prompt = f"""You are helping identify BBC Radio 4 announcers from Shipping Forecast transcripts.
+        # STEP 1: Check if it matches a known presenter
+        prompt_known = f"""You are helping identify BBC Radio 4 announcers from Shipping Forecast transcripts.
 
 The speech-to-text system extracted the name "{extracted_name}" from this transcript:
 "{transcript[-500:]}"
@@ -365,28 +494,67 @@ Known BBC Radio 4 announcers: {', '.join(known_names)}
 
 Question: Is "{extracted_name}" one of these known announcers (possibly with a transcription error like a possessive 's or slight misspelling)?
 
-Reply with ONLY the correct presenter name from the known list, or "UNKNOWN" if you cannot determine who it is. Do not explain."""
+Reply with ONLY the correct presenter name from the known list, or "UNKNOWN" if it doesn't match any of them. Do not explain."""
 
-        client = anthropic.Anthropic(api_key=api_key)
-        message = client.messages.create(
-            model="claude-3-haiku-20240307",
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
             max_tokens=50,
-            messages=[{"role": "user", "content": prompt}]
+            messages=[{"role": "user", "content": prompt_known}]
         )
 
-        response = message.content[0].text.strip()
-        logger.info(f"[presenter] LLM validation response: {response}")
+        result = response.choices[0].message.content.strip()
+        logger.info(f"[presenter] LLM known-match response: {result}")
 
-        if response == "UNKNOWN" or response.upper() == "UNKNOWN":
+        # If matched to known presenter, return it
+        if result != "UNKNOWN" and result.upper() != "UNKNOWN":
+            for presenter in known_presenters:
+                if result.lower() == presenter["name"].lower():
+                    return presenter["name"]
+
+        # STEP 2: If not in known list, check if it's a valid NEW BBC R4 announcer
+        logger.info(f"[presenter] Not in known list, checking if '{extracted_name}' is a new BBC R4 announcer...")
+
+        prompt_new = f"""You are helping identify BBC Radio 4 continuity announcers.
+
+The speech-to-text system extracted the name "{extracted_name}" from a Shipping Forecast broadcast.
+
+Context from transcript: "{transcript[-500:]}"
+
+Question: Is this a real BBC Radio 4 continuity announcer? They would sign off with phrases like "This is [Name]" or "I'm [Name]".
+
+If YES:
+- Reply with ONLY the announcer's correct full name (e.g., "Danielle Jalowiecka")
+- Correct any transcription errors in spelling
+
+If NO (not a BBC R4 announcer, or you're uncertain):
+- Reply with ONLY "UNKNOWN"
+
+Do not explain. Reply with just the name or UNKNOWN."""
+
+        response_new = client.chat.completions.create(
+            model="gpt-4o-mini",
+            max_tokens=50,
+            messages=[{"role": "user", "content": prompt_new}]
+        )
+
+        new_presenter_response = response_new.choices[0].message.content.strip()
+        logger.info(f"[presenter] LLM new-presenter response: {new_presenter_response}")
+
+        if new_presenter_response == "UNKNOWN" or new_presenter_response.upper() == "UNKNOWN":
+            logger.info(f"[presenter] LLM could not validate '{extracted_name}' as a BBC R4 announcer")
             return None
 
-        # Verify the response is actually a known presenter
-        for presenter in known_presenters:
-            if response.lower() == presenter["name"].lower():
-                return presenter["name"]
+        # LLM confirmed this is a valid new BBC R4 announcer!
+        canonical_name = new_presenter_response
+        logger.info(f"[presenter] LLM confirmed new BBC R4 announcer: {canonical_name}")
 
-        logger.warning(f"[presenter] LLM returned unknown name: {response}")
-        return None
+        # Auto-add to database
+        if auto_add_presenter_to_database(canonical_name, extracted_name, logger):
+            logger.info(f"[presenter] Successfully auto-added {canonical_name} to database")
+            return canonical_name
+        else:
+            logger.warning(f"[presenter] Failed to auto-add {canonical_name}, but returning name anyway")
+            return canonical_name
 
     except Exception as e:
         logger.warning(f"[presenter] LLM validation failed: {e}")
@@ -445,22 +613,21 @@ def detect_presenter(
         ]
         subprocess.run(extract_cmd, capture_output=True, check=True)
 
-        # Check for local Whisper availability (e.g., running in Docker on Rack)
-        local_whisper = os.environ.get('LOCAL_WHISPER') or os.path.exists('/app/transcribe_audio.py')
-        
-        if local_whisper:
-            # Run transcription locally
+        # Transcribe audio
+        if Config.LOCAL_WHISPER:
+            # Use local Whisper (for Docker container on Rack)
             logger.info("[presenter] Running local Whisper transcription...")
-            local_script = '/app/transcribe_audio.py' if os.path.exists('/app/transcribe_audio.py') else Config.RACK_TRANSCRIBE_SCRIPT
-            transcribe_cmd = ["python3", local_script, tmp_path, Config.WHISPER_MODEL]
+            transcribe_cmd = [
+                "python3", "/app/transcribe_audio.py",
+                tmp_path, Config.WHISPER_MODEL
+            ]
             transcribe_output = subprocess.check_output(transcribe_cmd, text=True, timeout=120)
         else:
-            # Copy to Rack and run remotely
+            # Copy to Rack and run remotely (for zigbee)
             logger.info("[presenter] Sending to Rack for transcription...")
             scp_cmd = ["scp", "-q", tmp_path, f"{Config.RACK_SSH_HOST}:/tmp/presenter_segment.wav"]
             subprocess.run(scp_cmd, capture_output=True, check=True, timeout=30)
 
-            # Run transcription on Rack
             ssh_cmd = [
                 "ssh", Config.RACK_SSH_HOST,
                 f"python3 {Config.RACK_TRANSCRIBE_SCRIPT} /tmp/presenter_segment.wav {Config.WHISPER_MODEL}"
@@ -1327,10 +1494,13 @@ def notify_presenter_status(
         payload["confidence"] = presenter_result.get("confidence", 0.0)
         payload["match_type"] = presenter_result.get("match_type", "none")
 
-        # Flag for manual review if unknown
+        # Flag for manual review if unknown or auto-added
         if presenter_result.get("match_type") == "unknown":
             payload["needs_review"] = True
             payload["review_reason"] = f"Unknown presenter: {presenter_result.get('raw_match')}"
+        elif presenter_result.get("match_type") == "auto_added":
+            payload["needs_review"] = True
+            payload["review_reason"] = f"Auto-added new presenter: {presenter_result.get('presenter')}"
     else:
         payload["detected"] = False
         payload["presenter"] = None
@@ -1752,16 +1922,29 @@ def pick_top_n_sites_from_scan(
     top = data.get("top20") or []
     kept = data.get("kept_initial") or []
 
+    # Filter out excluded hosts
+    def is_excluded(host: str) -> bool:
+        return any(excl in host for excl in Config.EXCLUDED_HOSTS)
+
     results = []
 
-    # Get from top20 first
-    for r in top[:n]:
+    # Get from top20 first (skip excluded hosts)
+    for r in top:
+        if len(results) >= n:
+            break
+        if is_excluded(r["host"]):
+            logger.info(f"[pick] Skipping excluded host: {r['host']}")
+            continue
         results.append((r["host"], int(r["port"]), r.get("avg")))
 
     # If we need more, get from kept_initial
     if len(results) < n and kept:
         kept.sort(key=lambda r: r["avg"], reverse=True)
-        for r in kept[:n - len(results)]:
+        for r in kept:
+            if len(results) >= n:
+                break
+            if is_excluded(r["host"]):
+                continue
             results.append((r["host"], int(r["port"]), r.get("avg")))
 
     # If still empty, use fallback
@@ -2216,7 +2399,10 @@ def cmd_record(args, logger: logging.Logger) -> int:
     ia_success = False
     ia_url = None
     ia_error = None
-    if mp3_path:
+    if not Config.IA_UPLOAD_ENABLED:
+        logger.info("[archive] IA uploads disabled (backup mode)")
+        ia_error = "Uploads disabled (backup mode)"
+    elif mp3_path:
         try:
             logger.info("[archive] Uploading to Internet Archive...")
             # Use presenter name, or "Unknown Announcer" if we detected someone but couldn't identify them
@@ -2283,7 +2469,13 @@ def list_audio_files() -> List[Tuple[float, str, int]]:
     for p in base_dir.iterdir():
         if not p.is_file():
             continue
+        # Skip symlinks (like latest.wav)
+        if p.is_symlink():
+            continue
         if not p.name.lower().endswith(Config.AUDIO_EXTS):
+            continue
+        # Only include processed files in feed (skip originals)
+        if '_processed' not in p.name and p.name.startswith('ShippingFCST-'):
             continue
 
         try:
@@ -2624,16 +2816,22 @@ def cmd_setup(args, logger: logging.Logger) -> int:
     block_start = "# >>> KIWI-SDR AUTO (managed) >>>"
     block_end = "# <<< KIWI-SDR AUTO (managed) <<<"
 
+    # Build command prefix for VPN namespace if configured
+    if Config.VPN_EXEC_PATH:
+        cmd_prefix = f"sudo {Config.VPN_EXEC_PATH} "
+    else:
+        cmd_prefix = ""
+
     # Build managed cron block
     managed_block = f"""{block_start}
 # Recompute this block daily just after midnight local:
 2 0 * * * /usr/bin/python3 {script_path} setup >> {Config.LOG_FILE} 2>&1
 
 # Scan ~5 min before 00:47 London
-{lm_scan0} {lh_scan0} * * * /usr/bin/python3 {script_path} scan >> {Config.LOG_FILE} 2>&1
+{lm_scan0} {lh_scan0} * * * {cmd_prefix}/usr/bin/python3 {script_path} scan >> {Config.LOG_FILE} 2>&1
 
 # Record at 00:47 London
-{lm_rec0} {lh_rec0} * * * /usr/bin/python3 {script_path} record >> {Config.LOG_FILE} 2>&1
+{lm_rec0} {lh_rec0} * * * {cmd_prefix}/usr/bin/python3 {script_path} record >> {Config.LOG_FILE} 2>&1
 
 # Weekly log trim (keep last 20000 lines), Sunday 00:20 local
 20 0 * * 0 /bin/bash -c 'tail -n 20000 "{Config.LOG_FILE}" > "{Config.LOG_FILE}.tmp" && mv "{Config.LOG_FILE}.tmp" "{Config.LOG_FILE}"'
