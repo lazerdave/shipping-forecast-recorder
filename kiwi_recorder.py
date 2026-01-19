@@ -186,9 +186,11 @@ METOFFICE_FORECAST_URL = "https://weather.metoffice.gov.uk/specialist-forecasts/
 PRESENTER_NAME_PATTERNS = [
     re.compile(r"\b(?:This is|This has been)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)", re.IGNORECASE),
     re.compile(r"\b(?:I'm|I am)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)", re.IGNORECASE),
+    re.compile(r"\b(?:It's|It is)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s+here", re.IGNORECASE),
     re.compile(r"\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s+(?:for|on|from)\s+(?:BBC|Radio)", re.IGNORECASE),
     re.compile(r"\bwith\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s*[.,]", re.IGNORECASE),
-    re.compile(r"\b(?:from me|from)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s+(?:and|here)", re.IGNORECASE),
+    re.compile(r"\b(?:from me|for me)[,.]?\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)", re.IGNORECASE),
+    re.compile(r"\bmyself[,.]?\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)", re.IGNORECASE),
 ]
 
 PRESENTER_FALSE_POSITIVES = {
@@ -380,6 +382,7 @@ def fuzzy_match_presenter(
 
     name_lower = name.lower().strip()
 
+    # FIRST PASS: Check all exact matches and variations
     for presenter in known_presenters:
         # Check exact match on full name
         if name_lower == presenter["name"].lower():
@@ -390,16 +393,25 @@ def fuzzy_match_presenter(
             if name_lower == variation.lower():
                 return {"name": presenter["name"], "confidence": 1.0, "match_type": "variation"}
 
+    # SECOND PASS: Check fuzzy matches (only if no exact match found)
+    best_match = None
+    best_ratio = 0.0
+    
+    for presenter in known_presenters:
         # Fuzzy match on full name
         ratio = SequenceMatcher(None, name_lower, presenter["name"].lower()).ratio()
-        if ratio >= threshold:
-            return {"name": presenter["name"], "confidence": ratio, "match_type": "fuzzy"}
+        if ratio >= threshold and ratio > best_ratio:
+            best_match = {"name": presenter["name"], "confidence": ratio, "match_type": "fuzzy"}
+            best_ratio = ratio
 
         # Fuzzy match on variations
         for variation in presenter.get("variations", []):
             ratio = SequenceMatcher(None, name_lower, variation.lower()).ratio()
-            if ratio >= threshold:
-                return {"name": presenter["name"], "confidence": ratio, "match_type": "fuzzy_variation"}
+            if ratio >= threshold and ratio > best_ratio:
+                best_match = {"name": presenter["name"], "confidence": ratio, "match_type": "fuzzy_variation"}
+                best_ratio = ratio
+    
+    return best_match
 
     return None
 
