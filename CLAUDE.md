@@ -363,3 +363,95 @@ cat /home/pi/kiwi_scans/latest_scan_198.json | jq '.top20[] | {host, port, avg}'
 - Scans are parallelized for efficiency; adjust SCAN_WORKERS if needed
 - Feed generation happens automatically after recording
 - Always use local IPs, not hostnames, in configs (hostname resolution unreliable in cron/services)
+## CRITICAL: Docker Container Management
+
+### ⚠️ NEVER copy files into the container at runtime
+
+The shipping-forecast container has all code baked into the Docker image. If you need to change code:
+
+1. **Edit the file on the host**: 
+2. **Rebuild the container**: 
+3. **Verify the feed**:   <link>https://shipping.lazerdave.blue/</link>
+    <link>https://shipping.lazerdave.blue/</link>
+
+**DO NOT** use  or  to modify code - changes will be lost on container restart.
+
+### Feed URL Configuration
+
+The feed URLs are controlled by:
+-  environment variable in 
+- Default fallback in  class (line ~99 of kiwi_recorder.py)
+
+**Current production URL**:  (Cloudflare Tunnel)
+
+If the feed ever shows wrong URLs (e.g.,  or ):
+1. Check  has correct 
+2. Check the default in kiwi_recorder.py matches
+3. Rebuild container: 
+4. Regenerate feed: 
+5. Verify: <?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"
+  xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd"
+  xmlns:atom="http://www.w3.org/2005/Atom">
+<channel>
+  <title>Shipping Forecast</title>
+  <link>https://shipping.lazerdave.blue/</link>
+  <description>Automated 198 kHz Shipping Forecast recordings via KiwiSDR, hosted on lazerdave.blue.</description>
+  <language>en-gb</language>
+  <lastBuildDate>Tue, 20 Jan 2026 21:36:23 GMT</lastBuildDate>
+  <atom:link rel="self" type="application/rss+xml" href="https://shipping.lazerdave.blue/feed.xml"/>
+  <itunes:author>KiwiSDR capture on rack</itunes:author>
+  <itunes:summary>Automated 198 kHz Shipping Forecast recordings via KiwiSDR, hosted on lazerdave.blue.</itunes:summary>
+  <itunes:category text="News">
+    <itunes:category text="Weather"/>
+  </itunes:category>
+  <image>
+    <url>https://shipping.lazerdave.blue/artwork.jpg</url>
+    <title>Shipping Forecast</title>
+    <link>https://shipping.lazerdave.blue/</link>
+
+### January 2026 Incident
+
+Feed broke because:
+1. Old code had  as the hardcoded default
+2. File was copied into container at runtime instead of being rebuilt
+3. Container restart reverted to old code with wrong URLs
+
+**Lesson**: Always rebuild the image. Never copy files into running containers.
+
+
+## CRITICAL: Docker Container Management
+
+### ⚠️ NEVER copy files into the container at runtime
+
+The shipping-forecast container has all code baked into the Docker image. If you need to change code:
+
+1. **Edit the file on the host**: /mnt/user/appdata/shipping-forecast/kiwi_recorder.py
+2. **Rebuild the container**: docker-compose build && docker-compose up -d
+3. **Verify the feed**: curl -s https://shipping.lazerdave.blue/feed.xml | grep '<link>'
+
+**DO NOT** use docker cp or docker exec to modify code - changes will be lost on container restart.
+
+### Feed URL Configuration
+
+The feed URLs are controlled by:
+- BASE_URL environment variable in docker-compose.yml
+- Default fallback in Config class (line ~99 of kiwi_recorder.py)
+
+**Current production URL**: https://shipping.lazerdave.blue (Cloudflare Tunnel)
+
+If the feed ever shows wrong URLs (e.g., zigbee.minskin-manta.ts.net or rack.minskin-manta.ts.net):
+1. Check docker-compose.yml has correct BASE_URL=https://shipping.lazerdave.blue
+2. Check the default in kiwi_recorder.py matches
+3. Rebuild container: docker-compose build && docker-compose up -d
+4. Regenerate feed: docker exec shipping-forecast python3 /app/kiwi_recorder.py feed
+5. Verify: curl -s https://shipping.lazerdave.blue/feed.xml | head -20
+
+### January 2026 Incident
+
+Feed broke because:
+1. Old code had zigbee.minskin-manta.ts.net as the hardcoded default
+2. File was copied into container at runtime instead of being rebuilt
+3. Container restart reverted to old code with wrong URLs
+
+**Lesson**: Always rebuild the image. Never copy files into running containers.
