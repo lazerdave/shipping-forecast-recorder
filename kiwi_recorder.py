@@ -89,14 +89,14 @@ class Config:
     # Feed settings
     MAX_FEED_ITEMS = 50
     AUDIO_EXTS = (".mp3", ".wav", ".m4a")
-    FEED_TITLE = "Shipping Forecast Tailscale"
-    FEED_DESC = "Automated 198 kHz Shipping Forecast recordings via KiwiSDR, delivered via Tailscale."
+    FEED_TITLE = "Shipping Forecast"
+    FEED_DESC = "Automated 198 kHz Shipping Forecast recordings via KiwiSDR, hosted on lazerdave.blue."
     FEED_LANG = "en-gb"
 
     # Configurable via environment variables
     HOSTNAME = socket.gethostname()
     FEED_AUTHOR = os.getenv("FEED_AUTHOR", f"KiwiSDR capture on {HOSTNAME}")
-    BASE_URL = os.getenv("BASE_URL", "https://zigbee.minskin-manta.ts.net")
+    BASE_URL = os.getenv("BASE_URL", "https://shipping.lazerdave.blue")
 
     # Rack backup settings
     RACK_BACKUP_PATH = "/mnt/rack-shipping"
@@ -2835,8 +2835,13 @@ def cmd_setup(args, logger: logging.Logger) -> int:
         cmd_prefix = ""
 
     # Build managed cron block
+    # Include critical env vars so cron jobs can access them
+    env_block = f"BASE_URL={Config.BASE_URL}\n"
+    if os.environ.get("ANTHROPIC_API_KEY"):
+        env_block += f"ANTHROPIC_API_KEY={os.environ.get('ANTHROPIC_API_KEY')}\n"
+    
     managed_block = f"""{block_start}
-# Recompute this block daily just after midnight local:
+{env_block}# Recompute this block daily just after midnight local:
 2 0 * * * /usr/bin/python3 {script_path} setup >> {Config.LOG_FILE} 2>&1
 
 # Scan ~5 min before 00:47 London
