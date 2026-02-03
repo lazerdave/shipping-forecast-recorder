@@ -2078,6 +2078,148 @@ def update_sidecar_with_presenter(
     except Exception as e:
         logger.warning(f"[presenter] Failed to update sidecar: {e}")
         return False
+# This will be inserted into kiwi_recorder.py after update_sidecar_with_presenter
+
+def generate_recording_json(
+    wav_path: str,
+    host: str,
+    port: int,
+    rssi_label: float,
+    ampm: str,
+    presenter_result: Optional[Dict[str, Any]],
+    forecast_html: Optional[str],
+    mp3_path: Optional[str],
+    logger: logging.Logger
+) -> Optional[str]:
+    """
+    Generate a structured JSON file for the recording.
+
+    This JSON is designed for downstream consumers (e.g. OpenClaw/WotanWasRight)
+    to create YouTube video companions and other derivative content.
+
+    Returns:
+        Path to the JSON file, or None on failure.
+    """
+    try:
+        now_utc = datetime.now(timezone.utc)
+        now_lon = now_utc.astimezone(ZoneInfo("Europe/London"))
+
+        data = {
+            "version": 1,
+            "type": "shipping_forecast_recording",
+            "generated_utc": now_utc.isoformat(timespec="seconds"),
+            "broadcast": {
+                "date_utc": now_utc.strftime("%Y-%m-%d"),
+                "time_utc": now_utc.strftime("%H:%M:%S"),
+                "date_london": now_lon.strftime("%Y-%m-%d"),
+                "time_london": now_lon.strftime("%H:%M:%S %Z"),
+                "slot": ampm,
+            },
+            "presenter": {
+                "name": None,
+                "confidence": None,
+                "match_type": None,
+                "detected": False,
+            },
+            "recording": {
+                "receiver_host": f"{host}:{port}",
+                "rssi_dbfs": rssi_label,
+                "frequency_khz": Config.FREQ_KHZ,
+                "mode": Config.MODE,
+                "wav_file": os.path.basename(wav_path),
+                "mp3_file": os.path.basename(mp3_path) if mp3_path else None,
+                "mp3_url": f"{Config.BASE_URL}/{os.path.basename(mp3_path)}" if mp3_path else None,
+            },
+            "forecast": {
+                "synopsis": None,
+                "gale_warnings": [],
+                "areas": [],
+                "valid_from": None,
+                "valid_until": None,
+                "issued_at": None,
+            },
+        }
+
+        # Fill presenter info
+        if presenter_result:
+            if presenter_result.get("presenter"):
+                data["presenter"]["name"] = presenter_result["presenter"]
+                data["presenter"]["confidence"] = presenter_result.get("confidence")
+                data["presenter"]["match_type"] = presenter_result.get("match_type")
+                data["presenter"]["detected"] = True
+            elif presenter_result.get("raw_match"):
+                data["presenter"]["name"] = presenter_result["raw_match"]
+                data["presenter"]["match_type"] = "unknown"
+                data["presenter"]["detected"] = True
+
+        # Parse forecast HTML into structured data
+        if forecast_html:
+            # Synopsis
+            synopsis_match = re.search(
+                r"<h2>The general synopsis at (\d+)</h2>\s*<p>(.+?)</p>",
+                forecast_html
+            )
+            if synopsis_match:
+                data["forecast"]["synopsis"] = synopsis_match.group(2).strip()
+
+            # Valid from/until
+            valid_from = re.search(
+                r'Forecast valid from:\s*<time datetime="([^"]+)">', forecast_html
+            )
+            valid_until = re.search(
+                r'until\s*<time datetime="([^"]+)">', forecast_html
+            )
+            issued_at = re.search(
+                r'Issued by the Met Office.*?at\s*<time datetime="([^"]+)">', forecast_html
+            )
+            if valid_from:
+                data["forecast"]["valid_from"] = valid_from.group(1)
+            if valid_until:
+                data["forecast"]["valid_until"] = valid_until.group(1)
+            if issued_at:
+                data["forecast"]["issued_at"] = issued_at.group(1)
+
+            # Gale warnings
+            gale_section = re.search(
+                r'<p class="warning">\s*There are.*?in\s+(.+?)\s*</p>',
+                forecast_html, re.DOTALL
+            )
+            if gale_section:
+                areas_text = gale_section.group(1).strip()
+                areas_text = re.sub(r"<[^>]+>", "", areas_text)
+                areas_text = re.sub(r"\s+", " ", areas_text)
+                areas_text = areas_text.replace(" and ", ", ")
+                data["forecast"]["gale_warnings"] = [
+                    a.strip().rstrip(".") for a in areas_text.split(",") if a.strip().rstrip(".")
+                ]
+
+            # Area forecasts
+            area_blocks = re.findall(
+                r"<h3>\s*([^<]+?)\s*</h3>\s*<p>\s*(.+?)\s*</p>",
+                forecast_html, re.DOTALL
+            )
+            for area_name, area_text in area_blocks:
+                name_clean = re.sub(r"<[^>]+>", "", area_name).strip()
+                name_clean = re.sub(r"\s+", " ", name_clean)
+                text_clean = re.sub(r"<[^>]+>", "", area_text).strip()
+                text_clean = re.sub(r"\s+", " ", text_clean)
+                if name_clean and "synopsis" not in name_clean.lower() and "area forecasts" not in name_clean.lower():
+                    data["forecast"]["areas"].append({
+                        "name": name_clean,
+                        "forecast": text_clean,
+                    })
+
+        # Write JSON file
+        json_path = wav_path.replace(".wav", ".json")
+        with open(json_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+
+        logger.info(f"[json] Generated: {json_path}")
+        return json_path
+
+    except Exception as e:
+        logger.warning(f"[json] Failed to generate JSON: {e}")
+        return None
 
 
 def record_audio(
@@ -2358,6 +2500,20 @@ def cmd_record(args, logger: logging.Logger) -> int:
         except Exception as e:
             logger.warning(f"[presenter] Detection failed: {e}")
 
+
+    # Generate structured JSON for downstream consumers (OpenClaw, YouTube companions)
+    try:
+        _mp3_for_json = None
+        if processed_path:
+            _mp3_for_json = processed_path.replace(".wav", ".mp3")
+            if not os.path.exists(_mp3_for_json):
+                _mp3_for_json = None
+        generate_recording_json(
+            wav_path, host, port, rssi_for_label, ampm,
+            presenter_result, forecast_html, _mp3_for_json, logger
+        )
+    except Exception as e:
+        logger.warning(f"JSON generation failed: {e}")
     # Rebuild feed
     try:
         cmd_feed(args, logger)
@@ -2836,7 +2992,7 @@ def cmd_setup(args, logger: logging.Logger) -> int:
 
     # Build managed cron block
     # Include critical env vars so cron jobs can access them
-    env_block = f"BASE_URL={Config.BASE_URL}\n"
+    env_block = f"BASE_URL={Config.BASE_URL}\nLOCAL_WHISPER=1\n"
     if os.environ.get("ANTHROPIC_API_KEY"):
         env_block += f"ANTHROPIC_API_KEY={os.environ.get('ANTHROPIC_API_KEY')}\n"
     
